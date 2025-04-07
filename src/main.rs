@@ -1,10 +1,10 @@
 mod commands;
-mod config;
 
 use crate::commands::log::log;
 use crate::commands::setup::setup;
 use clap::{Parser, Subcommand};
-use serde::Deserialize;
+use gj::config::load_config;
+use gj::notion::NotionClient;
 
 #[derive(Parser)]
 #[command(name = "gj", version, about = "Dead simple CLI for journaling", long_about = None)]
@@ -19,18 +19,14 @@ enum Commands {
     Setup,
 }
 
-#[derive(Deserialize)]
-struct Config {
-    notion_token: String,
-    database_id: String,
-}
-
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
+    let config = load_config();
+    let notion_client = NotionClient::new(config.notion_token, config.database_id);
 
     match cli.command {
-        Commands::Log => log().await,
+        Commands::Log => log(notion_client).await,
         Commands::Setup => setup(),
     }
 }

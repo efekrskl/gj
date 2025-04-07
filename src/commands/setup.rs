@@ -1,6 +1,6 @@
-use crate::config::save_config;
-use crate::config::{CONFIG_PATH, config_exists};
+use gj::config::CONFIG_PATH;
 use dialoguer::{Confirm, Input};
+use gj::config::{config_exists, save_config};
 
 pub fn setup() {
     if config_exists() {

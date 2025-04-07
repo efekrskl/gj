@@ -1,8 +1,14 @@
-use crate::Config;
 use dirs::home_dir;
+use serde::Deserialize;
 use serde_json::json;
 use std::fs;
 use std::path::PathBuf;
+
+#[derive(Deserialize)]
+pub struct Config {
+    pub notion_token: String,
+    pub database_id: String,
+}
 
 pub const CONFIG_PATH: &str = ".gj/config.json";
 
@@ -13,7 +19,7 @@ pub fn config_exists() -> bool {
 
 pub fn load_config() -> Config {
     let path = get_config_path();
-    let raw = fs::read_to_string(path).expect("⚠️ Missing config. Run `gj init` first.");
+    let raw = fs::read_to_string(path).expect("⚠️ Missing config. Run `gj setup` first.");
     serde_json::from_str(&raw).expect("⚠️ Invalid config file format.")
 }
 
