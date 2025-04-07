@@ -1,8 +1,8 @@
+use crate::config::load_config;
 use chrono::Utc;
 use dialoguer::Input;
 use reqwest::Client;
-use serde_json::{json, Value};
-use crate::config::load_config;
+use serde_json::{Value, json};
 
 pub async fn log() {
     let config = load_config();
@@ -24,7 +24,7 @@ pub async fn log() {
                         {
                             "type": "text",
                             "text": {
-                                "content": format!("{} - {}", i+1, message.trim()),
+                                "content": format!("{} - {}", i + 1, message.trim()),
                             }
                         }
                     ]

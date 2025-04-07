@@ -1,8 +1,8 @@
-use std::fs;
-use std::path::PathBuf;
+use crate::Config;
 use dirs::home_dir;
 use serde_json::json;
-use crate::Config;
+use std::fs;
+use std::path::PathBuf;
 
 fn get_config_path() -> PathBuf {
     let mut path = home_dir().expect("No home dir found");
