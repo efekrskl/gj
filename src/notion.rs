@@ -1,57 +1,78 @@
+use anyhow::{Context, Result};
 use chrono::Utc;
+use serde::Deserialize;
 use serde_json::{Value, json};
-use std::fmt::Pointer;
 
 pub struct NotionClient {
     client: reqwest::Client,
-    token: String,
     database_id: String,
     api_url: String,
 }
 
-#[derive(serde::Deserialize, Debug)]
-struct SearchByTitleResult {
+#[derive(Deserialize, Debug)]
+struct PageResult {
     id: String,
 }
 
-#[derive(serde::Deserialize, Debug)]
-struct SearchByTitleResponse {
-    results: Vec<SearchByTitleResult>,
+#[derive(Deserialize, Debug)]
+struct QueryResponse {
+    results: Vec<PageResult>,
+}
+
+#[derive(Deserialize, Debug)]
+struct BlockContent {
+    #[serde(rename = "heading_1")]
+    heading: Option<HeadingContent>,
+}
+
+#[derive(Deserialize, Debug)]
+struct HeadingContent {
+    rich_text: Vec<RichText>,
+}
+
+#[derive(Deserialize, Debug)]
+struct RichText {
+    text: TextContent,
+}
+
+#[derive(Deserialize, Debug)]
+struct TextContent {
+    content: String,
 }
 
 impl NotionClient {
     pub fn new(token: String, database_id: String) -> Self {
-        let client = reqwest::Client::new();
+        let mut headers = reqwest::header::HeaderMap::with_capacity(3);
+        headers.insert(
+            "Authorization",
+            format!("Bearer {}", token)
+                .parse()
+                .expect("Invalid token format"),
+        );
+        headers.insert(
+            "Notion-Version",
+            "2022-06-28".parse().expect("Invalid Notion API version"),
+        );
+        headers.insert(
+            "Content-Type",
+            "application/json"
+                .parse()
+                .expect("Invalid Content-Type header"),
+        );
+
+        let client = reqwest::Client::builder()
+            .default_headers(headers)
+            .build()
+            .expect("Failed to build HTTP client");
 
         NotionClient {
             client,
-            token,
             database_id,
             api_url: "https://api.notion.com".to_string(),
         }
     }
 
-    pub async fn create_page(&self, title: String, messages: Vec<String>) {
-        let messages: Value = messages
-            .into_iter()
-            .map(|message| {
-                json!({
-                    "object": "block",
-                    "type": "paragraph",
-                    "paragraph": {
-                        "rich_text": [
-                            {
-                                "type": "text",
-                                "text": {
-                                    "content": message,
-                                }
-                            }
-                        ]
-                    }
-                })
-            })
-            .collect();
-
+    pub async fn create_page(&self, title: String) -> Result<String> {
         let timestamp = Utc::now().to_rfc3339();
 
         let payload = json!({
@@ -69,32 +90,41 @@ impl NotionClient {
                 },
                 "Date": { "date": { "start": timestamp }},
             },
-            "children": messages,
         });
 
-        let res = self
+        let response = self
             .client
-            .post(format!("{}{}", self.api_url, "/v1/pages"))
-            .header("Authorization", format!("Bearer {}", self.token))
-            .header("Content-Type", "application/json")
-            .header("Notion-Version", "2022-06-28")
+            .post(format!("{}/v1/pages", self.api_url))
             .json(&payload)
             .send()
-            .await;
+            .await
+            .context("Failed to send create page request")?;
 
-        match res {
-            Ok(r) if r.status().is_success() => println!("✅ Log synced to Notion."),
-            Ok(r) => {
-                let err = r.text().await.unwrap_or_default();
-                eprintln!("❌ Sync failed: {}", err);
-            }
-            Err(e) => eprintln!("❌ Error: {}", e),
+        if !response.status().is_success() {
+            let error = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown Error".to_string());
+            anyhow::bail!("Failed to create page: {}", error);
         }
+
+        let response_json: Value = response
+            .json()
+            .await
+            .context("Failed to parse response as JSON")?;
+
+        let id = response_json["id"]
+            .as_str()
+            .context("Response missing page ID")?
+            .to_string();
+
+        println!("✅ Page created with ID: {}", id);
+        Ok(id)
     }
 
     pub async fn get_page_id_by_title(&self, title: &str) -> Option<String> {
         let payload = json!({
-                    "filter": {
+            "filter": {
             "property": "Name",
             "title": {
                 "equals": title
@@ -102,31 +132,74 @@ impl NotionClient {
         }
         });
 
-        let res = self
+        let response = self
             .client
             .post(format!(
                 "{}/v1/databases/{}/query",
                 self.api_url, self.database_id
             ))
-            .header("Authorization", format!("Bearer {}", self.token))
-            .header("Content-Type", "application/json")
-            .header("Notion-Version", "2022-06-28")
             .json(&payload)
+            .send()
+            .await
+            .expect("Failed request during get_page_id_by_title");
+
+        if !response.status().is_success() {
+            todo!()
+        }
+
+        let response_json: Value = response
+            .json()
+            .await
+            .expect("Failed to parse response as JSON");
+
+        let results = response_json["results"].as_array().unwrap();
+        if results.is_empty() {
+            println!("No page found with title: {}", title);
+            return None;
+        }
+
+        let page_id = results[0]["id"]
+            .as_str()
+            .expect("Response missing page ID")
+            .to_string();
+        println!("✅ Found page ID: {}", page_id);
+        Some(page_id)
+    }
+
+    pub async fn get_last_page_header_block_content(&self, page_id: &str) -> Option<String> {
+        let res = self
+            .client
+            .get(format!("{}/v1/blocks/{}/children", self.api_url, page_id))
             .send()
             .await;
 
         match res {
             Ok(r) if r.status().is_success() => {
-                let response: SearchByTitleResponse = r.json().await.unwrap();
-                println!("Response: {:?}", response);
+                let response: Value = r.json().await.unwrap();
 
-                if response.results.is_empty() {
+                let results = response["results"].as_array().unwrap();
+
+                if results.is_empty() {
                     None
                 } else {
-                    let first_item = response.results.first().unwrap();
-                    let id = first_item.id.clone();
-                    println!("Found page with ID: {}", id);
-                    Some(id)
+                    let headers = results.iter().filter(|block| block["type"] == "heading_1");
+                    let last_header = headers.last();
+
+                    let last_header_content = last_header?
+                        .get("heading_1")?
+                        .get("rich_text")?
+                        .get(0)?
+                        .get("text")?
+                        .get("content")?
+                        .as_str()
+                        .map(|s| s.to_string());
+
+                    if let Some(content) = last_header_content {
+                        println!("Found last header content: {}", content);
+                        Some(content)
+                    } else {
+                        None
+                    }
                 }
             }
             Ok(r) => {
@@ -141,5 +214,86 @@ impl NotionClient {
                 None
             }
         }
+    }
+
+    pub async fn append_header(&self, page_id: &str, content: String) -> Result<()> {
+        let payload = json!({
+            "children": [
+                {
+                    "type": "heading_1",
+                    "heading_1": {
+                        "rich_text": [
+                            {
+                                "type": "text",
+                                "text": {
+                                    "content": content,
+                                }
+                            }
+                        ]
+                    }
+                }
+            ]
+        });
+
+        let res = self
+            .client
+            .patch(format!("{}/v1/blocks/{}/children", self.api_url, page_id))
+            .json(&payload)
+            .send()
+            .await;
+
+        match res {
+            Ok(r) if r.status().is_success() => println!("✅ Header appended to page."),
+            Ok(r) => {
+                let err = r.text().await.unwrap_or_default();
+                eprintln!("❌ Sync failed: {}", err);
+            }
+            Err(e) => eprintln!("❌ Error: {}", e),
+        }
+
+        Ok(())
+    }
+
+    pub async fn append_messages(&self, page_id: &str, messages: String) -> Result<()> {
+        let messages: Value = messages
+            .split(";")
+            .map(|message| {
+                json!({
+                    "type": "paragraph",
+                    "paragraph": {
+                        "rich_text": [
+                            {
+                                "type": "text",
+                                "text": {
+                                    "content": message,
+                                }
+                            }
+                        ]
+                    }
+                })
+            })
+            .collect();
+
+        let payload = json!({
+            "children": messages
+        });
+
+        let res = self
+            .client
+            .patch(format!("{}/v1/blocks/{}/children", self.api_url, page_id))
+            .json(&payload)
+            .send()
+            .await;
+
+        match res {
+            Ok(r) if r.status().is_success() => println!("✅ Messages appended to page."),
+            Ok(r) => {
+                let err = r.text().await.unwrap_or_default();
+                eprintln!("❌ Sync failed: {}", err);
+            }
+            Err(e) => eprintln!("❌ Error: {}", e),
+        }
+
+        Ok(())
     }
 }

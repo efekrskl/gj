@@ -2,6 +2,7 @@ mod commands;
 
 use crate::commands::log::log;
 use crate::commands::setup::setup;
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use gj::config::load_config;
 use gj::notion::NotionClient;
@@ -20,13 +21,16 @@ enum Commands {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     let cli = Cli::parse();
     let config = load_config();
     let notion_client = NotionClient::new(config.notion_token, config.database_id);
 
     match cli.command {
         Commands::Log => log(notion_client).await,
-        Commands::Setup => setup(),
+        Commands::Setup => {
+            setup();
+            Ok(())
+        }
     }
 }
