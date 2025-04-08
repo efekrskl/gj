@@ -1,43 +1,11 @@
 use anyhow::{Context, Result};
 use chrono::Utc;
-use serde::Deserialize;
 use serde_json::{Value, json};
 
 pub struct NotionClient {
     client: reqwest::Client,
     database_id: String,
     api_url: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct PageResult {
-    id: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct QueryResponse {
-    results: Vec<PageResult>,
-}
-
-#[derive(Deserialize, Debug)]
-struct BlockContent {
-    #[serde(rename = "heading_1")]
-    heading: Option<HeadingContent>,
-}
-
-#[derive(Deserialize, Debug)]
-struct HeadingContent {
-    rich_text: Vec<RichText>,
-}
-
-#[derive(Deserialize, Debug)]
-struct RichText {
-    text: TextContent,
-}
-
-#[derive(Deserialize, Debug)]
-struct TextContent {
-    content: String,
 }
 
 impl NotionClient {
@@ -216,7 +184,7 @@ impl NotionClient {
         }
     }
 
-    pub async fn append_header(&self, page_id: &str, content: String) -> Result<()> {
+    pub async fn append_header(&self, page_id: &str, entry: String) -> Result<()> {
         let payload = json!({
             "children": [
                 {
@@ -226,7 +194,7 @@ impl NotionClient {
                             {
                                 "type": "text",
                                 "text": {
-                                    "content": content,
+                                    "content": entry,
                                 }
                             }
                         ]
@@ -254,8 +222,8 @@ impl NotionClient {
         Ok(())
     }
 
-    pub async fn append_messages(&self, page_id: &str, messages: String) -> Result<()> {
-        let messages: Value = messages
+    pub async fn append_entry(&self, page_id: &str, entry: String) -> Result<()> {
+        let logs: Value = entry
             .split(";")
             .map(|message| {
                 json!({
@@ -275,7 +243,7 @@ impl NotionClient {
             .collect();
 
         let payload = json!({
-            "children": messages
+            "children": logs
         });
 
         let res = self

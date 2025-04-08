@@ -1,33 +1,31 @@
 use anyhow::{Context, Result};
-use dialoguer::Input;
 use gj::notion::NotionClient;
 
-pub async fn log(notion_client: NotionClient) -> Result<()> {
-    let messages: String = Input::new()
-        .with_prompt("📝 What did you work on today?")
-        .interact_text()?;
+pub async fn log(notion_client: NotionClient, entry: String) -> Result<()> {
     let page_title = chrono::Utc::now().format("%m-%Y").to_string();
 
     match notion_client.get_page_id_by_title(&page_title).await {
         Some(page_id) => {
             println!("Page already exists for today. Updating...");
-            update_page_with_messages(notion_client, &page_id, messages).await?;
+            update_page_with_entry(notion_client, &page_id, entry).await?;
         }
         None => {
             println!("No page found for today. Creating a new one...");
-            let page_id = notion_client.create_page(page_title).await
+            let page_id = notion_client
+                .create_page(page_title)
+                .await
                 .context("Failed to create page")?;
-            update_page_with_messages(notion_client, &page_id, messages).await?;
+            update_page_with_entry(notion_client, &page_id, entry).await?;
         }
     }
-    
+
     Ok(())
 }
 
-async fn update_page_with_messages(
+async fn update_page_with_entry(
     notion_client: NotionClient,
     page_id: &str,
-    messages: String,
+    entry: String,
 ) -> Result<()> {
     let today_date = chrono::Utc::now().format("%d-%m").to_string();
 
@@ -44,7 +42,7 @@ async fn update_page_with_messages(
         notion_client.append_header(page_id, today_date).await?;
     }
 
-    notion_client.append_messages(page_id, messages).await?;
+    notion_client.append_entry(page_id, entry).await?;
 
     Ok(())
 }
