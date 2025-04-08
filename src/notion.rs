@@ -1,11 +1,22 @@
 use chrono::Utc;
 use serde_json::{Value, json};
+use std::fmt::Pointer;
 
 pub struct NotionClient {
     client: reqwest::Client,
     token: String,
     database_id: String,
     api_url: String,
+}
+
+#[derive(serde::Deserialize, Debug)]
+struct SearchByTitleResult {
+    id: String,
+}
+
+#[derive(serde::Deserialize, Debug)]
+struct SearchByTitleResponse {
+    results: Vec<SearchByTitleResult>,
 }
 
 impl NotionClient {
@@ -20,7 +31,7 @@ impl NotionClient {
         }
     }
 
-    pub async fn create_page(&self, messages: Vec<String>) {
+    pub async fn create_page(&self, title: String, messages: Vec<String>) {
         let messages: Value = messages
             .into_iter()
             .map(|message| {
@@ -46,6 +57,16 @@ impl NotionClient {
         let payload = json!({
             "parent": { "database_id": self.database_id },
             "properties": {
+                "Name": {
+                    "title": [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": title,
+                            }
+                        }
+                    ]
+                },
                 "Date": { "date": { "start": timestamp }},
             },
             "children": messages,
@@ -53,7 +74,7 @@ impl NotionClient {
 
         let res = self
             .client
-            .post(format!("{}{}",self.api_url, "/v1/pages"))
+            .post(format!("{}{}", self.api_url, "/v1/pages"))
             .header("Authorization", format!("Bearer {}", self.token))
             .header("Content-Type", "application/json")
             .header("Notion-Version", "2022-06-28")
@@ -68,6 +89,57 @@ impl NotionClient {
                 eprintln!("❌ Sync failed: {}", err);
             }
             Err(e) => eprintln!("❌ Error: {}", e),
+        }
+    }
+
+    pub async fn get_page_id_by_title(&self, title: &str) -> Option<String> {
+        let payload = json!({
+                    "filter": {
+            "property": "Name",
+            "title": {
+                "equals": title
+            }
+        }
+        });
+
+        let res = self
+            .client
+            .post(format!(
+                "{}/v1/databases/{}/query",
+                self.api_url, self.database_id
+            ))
+            .header("Authorization", format!("Bearer {}", self.token))
+            .header("Content-Type", "application/json")
+            .header("Notion-Version", "2022-06-28")
+            .json(&payload)
+            .send()
+            .await;
+
+        match res {
+            Ok(r) if r.status().is_success() => {
+                let response: SearchByTitleResponse = r.json().await.unwrap();
+                println!("Response: {:?}", response);
+
+                if response.results.is_empty() {
+                    None
+                } else {
+                    let first_item = response.results.first().unwrap();
+                    let id = first_item.id.clone();
+                    println!("Found page with ID: {}", id);
+                    Some(id)
+                }
+            }
+            Ok(r) => {
+                let err = r.text().await.unwrap_or_default();
+                eprintln!("❌ Sync failed: {}", err);
+
+                None
+            }
+            Err(e) => {
+                eprintln!("❌ Error: {}", e);
+
+                None
+            }
         }
     }
 }

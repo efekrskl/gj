@@ -1,5 +1,5 @@
-use gj::config::CONFIG_PATH;
 use dialoguer::{Confirm, Input};
+use gj::config::CONFIG_PATH;
 use gj::config::{config_exists, save_config};
 
 pub fn setup() {
