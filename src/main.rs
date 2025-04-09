@@ -18,9 +18,7 @@ struct Cli {
 enum Commands {
     Setup,
 
-    Log {
-        entry: String,
-    },
+    Log { entry: String },
 }
 
 #[tokio::main]
@@ -29,13 +27,13 @@ async fn main() -> Result<()> {
 
     match cli.command {
         Commands::Setup => {
-            setup();
+            setup().await?;
             Ok(())
         }
         Commands::Log { entry } => {
             let config = load_config();
-            let notion_client = NotionClient::new(config.notion_token, config.database_id);
-            log(notion_client, entry).await
+            let notion_client = NotionClient::new(config.notion_token);
+            log(notion_client, entry, config.database_id).await
         }
     }
 }

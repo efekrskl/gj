@@ -1,17 +1,20 @@
 use anyhow::{Context, Result};
 use gj::notion::NotionClient;
 
-pub async fn log(notion_client: NotionClient, entry: String) -> Result<()> {
+pub async fn log(notion_client: NotionClient, entry: String, database_id: String) -> Result<()> {
     let page_title = chrono::Utc::now().format("%B %Y").to_string();
 
-    match notion_client.get_page_id_by_title(&page_title).await {
+    match notion_client
+        .get_page_id_by_title(&page_title, &database_id)
+        .await
+    {
         Some(page_id) => {
             println!("Page already exists for today. Updating...");
             update_page_with_entry(notion_client, &page_id, entry).await?;
         }
         None => {
             let page_id = notion_client
-                .create_page(page_title)
+                .create_page(page_title, &database_id)
                 .await
                 .context("Failed to create page")?;
             update_page_with_entry(notion_client, &page_id, entry).await?;

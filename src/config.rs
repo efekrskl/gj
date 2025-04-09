@@ -23,10 +23,10 @@ pub fn load_config() -> Config {
     serde_json::from_str(&raw).expect("⚠️ Invalid config file format.")
 }
 
-pub fn save_config(token: String, db: String) {
+pub fn save_config(token: String, database_id: String) {
     let config = json!({
         "notion_token": token,
-        "database_id": db
+        "database_id": database_id
     });
     let path = get_config_path();
     let parent = path.parent().unwrap();
