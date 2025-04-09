@@ -10,7 +10,6 @@ pub async fn log(notion_client: NotionClient, entry: String) -> Result<()> {
             update_page_with_entry(notion_client, &page_id, entry).await?;
         }
         None => {
-            println!("No page found for today. Creating a new one...");
             let page_id = notion_client
                 .create_page(page_title)
                 .await
@@ -37,12 +36,13 @@ async fn update_page_with_entry(
         None => true,
     };
 
-    if needs_header {
-        println!("Adding date header to page...");
-        notion_client.append_header(page_id, today_date).await?;
-    }
-
-    notion_client.append_entry(page_id, entry).await?;
+    notion_client
+        .append_entry(
+            page_id,
+            entry,
+            if needs_header { Some(today_date) } else { None },
+        )
+        .await?;
 
     Ok(())
 }

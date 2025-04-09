@@ -184,47 +184,31 @@ impl NotionClient {
         }
     }
 
-    pub async fn append_header(&self, page_id: &str, entry: String) -> Result<()> {
-        let payload = json!({
-            "children": [
-                {
-                    "type": "heading_1",
-                    "heading_1": {
-                        "rich_text": [
-                            {
-                                "type": "text",
-                                "text": {
-                                    "content": entry,
-                                }
+    pub async fn append_entry(
+        &self,
+        page_id: &str,
+        entry: String,
+        header: Option<String>,
+    ) -> Result<()> {
+        let mut logs = vec![];
+        if header.is_some() {
+            logs.push(json!({
+                "type": "heading_1",
+                "heading_1": {
+                    "rich_text": [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": header,
                             }
-                        ]
-                    }
+                        }
+                    ]
                 }
-            ]
-        });
-
-        let res = self
-            .client
-            .patch(format!("{}/v1/blocks/{}/children", self.api_url, page_id))
-            .json(&payload)
-            .send()
-            .await;
-
-        match res {
-            Ok(r) if r.status().is_success() => println!("✅ Header appended to page."),
-            Ok(r) => {
-                let err = r.text().await.unwrap_or_default();
-                eprintln!("❌ Sync failed: {}", err);
-            }
-            Err(e) => eprintln!("❌ Error: {}", e),
+            }))
         }
 
-        Ok(())
-    }
-
-    pub async fn append_entry(&self, page_id: &str, entry: String) -> Result<()> {
-        let logs: Value = entry
-            .split(";")
+        let entry_logs = entry
+            .split("--")
             .map(|message| {
                 json!({
                     "type": "paragraph",
@@ -239,8 +223,9 @@ impl NotionClient {
                         ]
                     }
                 })
-            })
-            .collect();
+            });
+
+        logs.extend(entry_logs);
 
         let payload = json!({
             "children": logs
