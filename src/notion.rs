@@ -1,3 +1,4 @@
+use crate::emoji::apply_emoji_prefix;
 use anyhow::{Context, Result};
 use chrono::Utc;
 use serde_json::{Value, json};
@@ -207,23 +208,21 @@ impl NotionClient {
             }))
         }
 
-        let entry_logs = entry
-            .split(";")
-            .map(|message| {
-                json!({
-                    "type": "paragraph",
-                    "paragraph": {
-                        "rich_text": [
-                            {
-                                "type": "text",
-                                "text": {
-                                    "content": message,
-                                }
+        let entry_logs = entry.split(";").map(|message| {
+            json!({
+                "type": "bulleted_list_item",
+                "bulleted_list_item": {
+                    "rich_text": [
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": apply_emoji_prefix(message),
                             }
-                        ]
-                    }
-                })
-            });
+                        }
+                    ]
+                }
+            })
+        });
 
         logs.extend(entry_logs);
 
