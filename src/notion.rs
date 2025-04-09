@@ -208,7 +208,7 @@ impl NotionClient {
         }
 
         let entry_logs = entry
-            .split("--")
+            .split(";")
             .map(|message| {
                 json!({
                     "type": "paragraph",
