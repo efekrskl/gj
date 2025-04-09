@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use gj::notion::NotionClient;
 
 pub async fn log(notion_client: NotionClient, entry: String) -> Result<()> {
-    let page_title = chrono::Utc::now().format("%m-%Y").to_string();
+    let page_title = chrono::Utc::now().format("%B %Y").to_string();
 
     match notion_client.get_page_id_by_title(&page_title).await {
         Some(page_id) => {
@@ -27,7 +27,7 @@ async fn update_page_with_entry(
     page_id: &str,
     entry: String,
 ) -> Result<()> {
-    let today_date = chrono::Utc::now().format("%d-%m").to_string();
+    let today_date = chrono::Utc::now().format("%A (%d/%m)").to_string();
 
     let needs_header = match notion_client
         .get_last_page_header_block_content(page_id)
