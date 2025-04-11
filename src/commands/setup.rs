@@ -38,6 +38,8 @@ pub async fn setup() -> Result<()> {
         Some(id) => id,
         None => notion_client.create_gj_database(&root_page_id).await?,
     };
+    
+    println!("✅ Found or created database with ID: {database_id}");
 
     if confirm {
         save_config(token, database_id);

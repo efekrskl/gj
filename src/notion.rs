@@ -84,7 +84,6 @@ impl NotionClient {
             .context("Response missing page ID")?
             .to_string();
 
-        println!("✅ Page created with ID: {}", id);
         Ok(id)
     }
 
@@ -125,7 +124,6 @@ impl NotionClient {
 
         let results = response_json["results"].as_array().unwrap();
         if results.is_empty() {
-            println!("No page found with title: {}", title);
             return None;
         }
 
@@ -133,7 +131,6 @@ impl NotionClient {
             .as_str()
             .expect("Response missing page ID")
             .to_string();
-        println!("✅ Found page ID: {}", page_id);
         Some(page_id)
     }
 
@@ -166,7 +163,6 @@ impl NotionClient {
                         .map(|s| s.to_string());
 
                     if let Some(content) = last_header_content {
-                        println!("Found last header content: {}", content);
                         Some(content)
                     } else {
                         None
@@ -240,7 +236,7 @@ impl NotionClient {
             .await;
 
         match res {
-            Ok(r) if r.status().is_success() => println!("✅ Messages appended to page."),
+            Ok(r) if r.status().is_success() => (),
             Ok(r) => {
                 let err = r.text().await.unwrap_or_default();
                 eprintln!("❌ Sync failed: {}", err);
@@ -307,7 +303,6 @@ impl NotionClient {
             .context("Missing database ID from response")?
             .to_string();
 
-        println!("✅ Created GJ database with ID: {}", db_id);
         Ok(db_id)
     }
 
@@ -343,7 +338,6 @@ impl NotionClient {
 
             if title_text == "Work Log (gj)" {
                 if let Some(id) = db["id"].as_str() {
-                    println!("✅ Found GJ database by title: {}", id);
                     return Ok(Some(id.to_string()));
                 }
             }
