@@ -3,37 +3,35 @@ mod commands;
 use crate::commands::log::log;
 use crate::commands::setup::setup;
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::Parser;
 use gj::config::load_config;
 use gj::notion::NotionClient;
 
 #[derive(Parser)]
 #[command(name = "gj", version, about = "Dead simple CLI for journaling")]
 struct Cli {
-    #[command(subcommand)]
-    command: Commands,
-}
+    #[arg(value_name = "ENTRY", required_unless_present = "setup")]
+    entry: Option<String>,
 
-#[derive(Subcommand)]
-enum Commands {
-    Setup,
-
-    Log { entry: String },
+    #[arg(long)]
+    setup: bool,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    match cli.command {
-        Commands::Setup => {
-            setup().await?;
-            Ok(())
-        }
-        Commands::Log { entry } => {
-            let config = load_config();
-            let notion_client = NotionClient::new(config.notion_token);
-            log(notion_client, entry, config.database_id).await
-        }
+    if cli.setup {
+        setup().await?;
+        return Ok(());
+    }
+
+    if let Some(entry) = cli.entry {
+        let config = load_config();
+        let notion_client = NotionClient::new(config.notion_token);
+        log(notion_client, entry, config.database_id).await
+    } else {
+        eprintln!("Error: No entry provided. Use --help for usage.");
+        Ok(())
     }
 }

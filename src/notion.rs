@@ -1,4 +1,3 @@
-use crate::emoji::apply_emoji_prefix;
 use anyhow::{Context, Result};
 use chrono::Utc;
 use serde_json::{Value, json};
@@ -39,7 +38,7 @@ impl NotionClient {
         }
     }
 
-    pub async fn create_page(&self, title: String, database_id: &str) -> Result<String> {
+    pub async fn create_page(&self, title: &str, database_id: &str) -> Result<String> {
         let timestamp = Utc::now().to_rfc3339();
 
         let payload = json!({
@@ -111,7 +110,12 @@ impl NotionClient {
             .expect("Failed request during get_page_id_by_title");
 
         if !response.status().is_success() {
-            todo!()
+            let error = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown Error".to_string());
+            eprintln!("❌ Failed to get page ID: {}", error);
+            return None;
         }
 
         let response_json: Value = response
@@ -183,14 +187,14 @@ impl NotionClient {
         }
     }
 
-    pub async fn append_entry(
+    pub async fn add_entries(
         &self,
         page_id: &str,
-        entry: String,
-        header: Option<String>,
+        entries: Vec<String>,
+        subtitle: Option<String>,
     ) -> Result<()> {
         let mut logs = vec![];
-        if header.is_some() {
+        if subtitle.is_some() {
             logs.push(json!({
                 "type": "heading_1",
                 "heading_1": {
@@ -198,7 +202,7 @@ impl NotionClient {
                         {
                             "type": "text",
                             "text": {
-                                "content": header,
+                                "content": subtitle,
                             }
                         }
                     ]
@@ -206,7 +210,7 @@ impl NotionClient {
             }))
         }
 
-        let entry_logs = entry.split(";").map(|message| {
+        let entry_logs = entries.iter().map(|message| {
             json!({
                 "type": "bulleted_list_item",
                 "bulleted_list_item": {
@@ -214,7 +218,7 @@ impl NotionClient {
                         {
                             "type": "text",
                             "text": {
-                                "content": apply_emoji_prefix(message),
+                                "content": message,
                             }
                         }
                     ]
@@ -245,50 +249,6 @@ impl NotionClient {
         }
 
         Ok(())
-    }
-
-    // todo use a single function to create a page
-    pub async fn create_parent_page(&self) -> Result<String> {
-        let payload = json!({
-            "parent": { "type": "workspace", "workspace": true },
-            "properties": {
-                "title": [
-                    {
-                        "type": "text",
-                        "text": { "content": "Work Journal" }
-                    }
-                ]
-            }
-        });
-
-        let response = self
-            .client
-            .post(format!("{}/v1/pages", self.api_url))
-            .json(&payload)
-            .send()
-            .await
-            .context("Failed to send create page request")?;
-
-        if !response.status().is_success() {
-            let error = response
-                .text()
-                .await
-                .unwrap_or_else(|_| "Unknown Error".to_string());
-            anyhow::bail!("Failed to create page: {}", error);
-        }
-
-        let response_json: Value = response
-            .json()
-            .await
-            .context("Failed to parse response as JSON")?;
-
-        let id = response_json["id"]
-            .as_str()
-            .context("Response missing page ID")?
-            .to_string();
-
-        println!("✅ Page created with ID: {}", id);
-        Ok(id)
     }
 
     pub async fn create_gj_database(&self, root_page_id: &str) -> Result<String> {
@@ -338,7 +298,7 @@ impl NotionClient {
             anyhow::bail!("Failed to create database: {}", err_text);
         }
 
-        let json: serde_json::Value = response
+        let json: Value = response
             .json()
             .await
             .context("Failed to parse database creation response")?;
@@ -353,11 +313,11 @@ impl NotionClient {
 
     pub async fn find_gj_database_by_title(&self) -> Result<Option<String>> {
         let payload = json!({
-        "filter": {
-            "value": "database",
-            "property": "object"
-        }
-    });
+            "filter": {
+                "value": "database",
+                "property": "object"
+            }
+        });
 
         let res = self
             .client
