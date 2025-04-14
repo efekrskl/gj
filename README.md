@@ -1,7 +1,10 @@
 # gj
 
-🪵 Dead simple CLI for journaling.  
-Write logs from the terminal, stored in Notion.
+🪵 gj is a dead simple journaling CLI.
+Type your thoughts into the terminal — they get logged to Notion, one page per day. No clutter, no fuss.
+
+<img width="1293" alt="image" src="https://github.com/user-attachments/assets/240aec31-1cc4-4e66-9b4c-3ca75429efa3" />
+
 
 ## Install
 
