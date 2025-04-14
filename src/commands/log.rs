@@ -9,7 +9,7 @@ pub async fn log(
     tags: Vec<String>,
     database_id: String,
 ) -> Result<()> {
-    let page_title = format!("🪵 {}", chrono::Utc::now().format("%B %e, %Y"));
+    let page_title = chrono::Utc::now().format("%B %e, %Y").to_string();
     let page_id = with_spinner(
         get_or_create_page(&notion_client, &page_title, &database_id),
         "🔎 Connecting...".to_string(),
