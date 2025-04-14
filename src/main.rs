@@ -13,6 +13,9 @@ struct Cli {
     #[arg(value_name = "ENTRY", required_unless_present = "setup")]
     entry: Option<String>,
 
+    #[arg(value_name = "TAGS", long, value_delimiter = ',')]
+    pub tags: Vec<String>,
+
     #[arg(long)]
     setup: bool,
 }
@@ -29,7 +32,7 @@ async fn main() -> Result<()> {
     if let Some(entry) = cli.entry {
         let config = load_config();
         let notion_client = NotionClient::new(config.notion_token);
-        log(notion_client, entry, config.database_id).await
+        log(notion_client, entry, cli.tags, config.database_id).await
     } else {
         eprintln!("Error: No entry provided. Use --help for usage.");
         Ok(())

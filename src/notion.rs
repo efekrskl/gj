@@ -1,3 +1,4 @@
+use crate::capitalize_first::capitalize_first;
 use crate::config::GJ_TITLE_MARKER;
 use anyhow::{Context, Result};
 use chrono::Utc;
@@ -135,57 +136,8 @@ impl NotionClient {
         Some(page_id)
     }
 
-    pub async fn get_last_page_header_block_content(&self, page_id: &str) -> Option<String> {
-        let res = self
-            .client
-            .get(format!("{}/v1/blocks/{}/children", self.api_url, page_id))
-            .send()
-            .await;
-
-        match res {
-            Ok(r) if r.status().is_success() => {
-                let response: Value = r.json().await.unwrap();
-
-                let results = response["results"].as_array().unwrap();
-
-                if results.is_empty() {
-                    None
-                } else {
-                    let headers = results.iter().filter(|block| block["type"] == "heading_1");
-                    let last_header = headers.last();
-
-                    let last_header_content = last_header?
-                        .get("heading_1")?
-                        .get("rich_text")?
-                        .get(0)?
-                        .get("text")?
-                        .get("content")?
-                        .as_str()
-                        .map(|s| s.to_string());
-
-                    if let Some(content) = last_header_content {
-                        Some(content)
-                    } else {
-                        None
-                    }
-                }
-            }
-            Ok(r) => {
-                let err = r.text().await.unwrap_or_default();
-                eprintln!("❌ Sync failed: {}", err);
-
-                None
-            }
-            Err(e) => {
-                eprintln!("❌ Error: {}", e);
-
-                None
-            }
-        }
-    }
-
     pub async fn add_entries(&self, page_id: &str, entries: Vec<String>) -> Result<()> {
-        let logs = entries
+        let entries_property = entries
             .iter()
             .map(|message| {
                 json!({
@@ -205,7 +157,7 @@ impl NotionClient {
             .collect::<Vec<Value>>();
 
         let payload = json!({
-            "children": logs
+            "children": entries_property,
         });
 
         let res = self
@@ -324,5 +276,70 @@ impl NotionClient {
         }
 
         Ok(None)
+    }
+
+    pub async fn get_tags_from_page(&self, page_id: &str) -> Result<Vec<String>> {
+        let response = self
+            .client
+            .get(format!("{}/v1/pages/{}", self.api_url, page_id))
+            .send()
+            .await
+            .context("Failed to fetch page")?;
+
+        if !response.status().is_success() {
+            let err = response.text().await.unwrap_or_default();
+            anyhow::bail!("Failed to get page tags: {}", err);
+        }
+
+        let json: Value = response.json().await.context("Failed to parse page JSON")?;
+
+        let tags = json["properties"]["Tag"]["multi_select"]
+            .as_array()
+            .unwrap_or(&vec![])
+            .iter()
+            .filter_map(|v| v["name"].as_str().map(|s| s.to_string()))
+            .collect::<Vec<String>>();
+
+        Ok(tags)
+    }
+
+    pub async fn add_tags_to_page(&self, page_id: &str, tags: Vec<String>) -> Result<()> {
+        if tags.is_empty() {
+            return Ok(());
+        }
+
+        let mut existing_tags = self.get_tags_from_page(page_id).await?;
+        existing_tags.extend(tags);
+
+        let multi_select = existing_tags
+            .into_iter()
+            .map(|tag| json!({ "name": capitalize_first(&tag) }))
+            .collect::<Vec<Value>>();
+
+        let payload = json!({
+            "properties": {
+                "Tag": {
+                    "multi_select": multi_select
+                }
+            }
+        });
+
+        let res = self
+            .client
+            .patch(format!("{}/v1/pages/{}", self.api_url, page_id))
+            .json(&payload)
+            .send()
+            .await
+            .context("Failed to update page tags")?;
+
+        if !res.status().is_success() {
+            let err = res
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown Error".to_string());
+            anyhow::bail!("❌ Failed to update tags: {}", err);
+        }
+
+        Ok(())
     }
 }

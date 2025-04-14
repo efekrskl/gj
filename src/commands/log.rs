@@ -3,7 +3,12 @@ use gj::emoji::apply_emoji_prefix;
 use gj::notion::NotionClient;
 use gj::with_spinner::with_spinner;
 
-pub async fn log(notion_client: NotionClient, entry: String, database_id: String) -> Result<()> {
+pub async fn log(
+    notion_client: NotionClient,
+    entry: String,
+    tags: Vec<String>,
+    database_id: String,
+) -> Result<()> {
     let page_title = format!("🪵 {}", chrono::Utc::now().format("%B %e, %Y"));
     let page_id = with_spinner(
         get_or_create_page(&notion_client, &page_title, &database_id),
@@ -16,7 +21,12 @@ pub async fn log(notion_client: NotionClient, entry: String, database_id: String
     let entries = build_entries(entry);
 
     with_spinner(
-        notion_client.add_entries(&page_id, entries),
+        async {
+            notion_client.add_entries(&page_id, entries.clone()).await?;
+            notion_client.add_tags_to_page(&page_id, tags).await?;
+
+            Ok(())
+        },
         "🚀 Pushing Logs...".to_string(),
         Some("🎉 All done, gj!".to_string()),
         Some("❌ Failed to push logs".to_string()),
