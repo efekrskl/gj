@@ -39,13 +39,39 @@ pub async fn setup() -> Result<()> {
         None => notion_client.create_gj_database(&root_page_id).await?,
     };
     
-    println!("✅ Found or created database with ID: {database_id}");
-
     if confirm {
         save_config(token, database_id);
+        print_post_setup_guide();
         Ok(())
     } else {
         println!("❌ Aborted");
         Ok(())
     }
+}
+
+pub fn print_post_setup_guide() {
+    println!(
+        r#"
+
+  /$$$$$$     /$$$$$ /$$
+ /$$__  $$   |__  $$| $$
+| $$  \__/      | $$| $$
+| $$ /$$$$      | $$| $$
+| $$|_  $$ /$$  | $$|__/
+| $$  \ $$| $$  | $$    
+|  $$$$$$/|  $$$$$$/ /$$
+ \______/  \______/ |__/
+                        
+📌 Final touches in Notion (highly recommended):
+
+1. ➕ Enable Full Width — click the ⋯ menu → "Full width"
+2. 🗓️ Switch the database view to "Calendar" — click the ⋯ menu on the auto generated database → "Layout" → "Calendar"
+3. 🏷️ Under the same ⋯ menu, click "Properties" and make "Tags" visible
+4. 🚨 DO NOT rename "GJ Dead Simple Journal"
+   (this is how gj finds your database)
+
+You're all set. Try:
+  gj "first log entry"
+"#
+    );
 }

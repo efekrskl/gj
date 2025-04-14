@@ -16,26 +16,24 @@ brew install gj
 gj "wrote some code"
 ```
 
-- Entries are timestamped and grouped by month
-- Use `;` to add multiple entries at once
+- Entries are timestamped and grouped by date
+- Use ; to log multiple entries in one line
 
 ```bash
-gj "implemented the very first version of gj; documented my learnings with gj; solved some bugs"
+gj "pair programmed on a new feature; wrote some tests" --tags="pair programming, tests"
 ```
 
-Will be shown in Notion as:
-
-<img width="1723" alt="image" src="https://github.com/user-attachments/assets/b7726166-5648-4870-9192-aa64aaadf24e" />
-
+- Use --tags to add tags to the current day's page (stored as a Notion multi-select property)
 
 ## Setup
 
 First-time only:
 
-1. [Create an integration](https://www.notion.so/my-integrations)
+1. [Create a Notion integration](https://www.notion.so/my-integrations)
 2. Create a page in your workspace
-3. Copy the integration token and page ID
-4. Run `gj --setup`
+3. In the meatballs menu (⋯) → Connections, connect your integration
+4. Copy the integration token and page ID
+5. Run `gj --setup` and paste the token and page ID when prompted
 
 ## License
 

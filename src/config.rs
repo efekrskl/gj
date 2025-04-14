@@ -33,7 +33,6 @@ pub fn save_config(token: String, database_id: String) {
     let parent = path.parent().unwrap();
     fs::create_dir_all(parent).unwrap();
     fs::write(path, serde_json::to_string_pretty(&config).unwrap()).unwrap();
-    println!("✅ Config saved to ~/{CONFIG_PATH}");
 }
 
 fn get_config_path() -> PathBuf {
