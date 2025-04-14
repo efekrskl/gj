@@ -11,6 +11,7 @@ pub struct Config {
 }
 
 pub const CONFIG_PATH: &str = ".gj/config.json";
+pub const GJ_TITLE_MARKER: &str = "GJ Dead Simple Journal";
 
 pub fn config_exists() -> bool {
     let path = get_config_path();

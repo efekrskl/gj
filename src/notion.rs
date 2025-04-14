@@ -1,3 +1,4 @@
+use crate::config::GJ_TITLE_MARKER;
 use anyhow::{Context, Result};
 use chrono::Utc;
 use serde_json::{Value, json};
@@ -38,7 +39,7 @@ impl NotionClient {
         }
     }
 
-    pub async fn create_page(&self, title: &str, database_id: &str) -> Result<String> {
+    pub async fn create_page(&self, page_title: &str, database_id: &str) -> Result<String> {
         let timestamp = Utc::now().to_rfc3339();
 
         let payload = json!({
@@ -49,7 +50,7 @@ impl NotionClient {
                         {
                             "type": "text",
                             "text": {
-                                "content": title,
+                                "content": page_title,
                             }
                         }
                     ]
@@ -183,46 +184,25 @@ impl NotionClient {
         }
     }
 
-    pub async fn add_entries(
-        &self,
-        page_id: &str,
-        entries: Vec<String>,
-        subtitle: Option<String>,
-    ) -> Result<()> {
-        let mut logs = vec![];
-        if subtitle.is_some() {
-            logs.push(json!({
-                "type": "heading_1",
-                "heading_1": {
-                    "rich_text": [
-                        {
-                            "type": "text",
-                            "text": {
-                                "content": subtitle,
+    pub async fn add_entries(&self, page_id: &str, entries: Vec<String>) -> Result<()> {
+        let logs = entries
+            .iter()
+            .map(|message| {
+                json!({
+                    "type": "bulleted_list_item",
+                    "bulleted_list_item": {
+                        "rich_text": [
+                            {
+                                "type": "text",
+                                "text": {
+                                    "content": message,
+                                }
                             }
-                        }
-                    ]
-                }
-            }))
-        }
-
-        let entry_logs = entries.iter().map(|message| {
-            json!({
-                "type": "bulleted_list_item",
-                "bulleted_list_item": {
-                    "rich_text": [
-                        {
-                            "type": "text",
-                            "text": {
-                                "content": message,
-                            }
-                        }
-                    ]
-                }
+                        ]
+                    }
+                })
             })
-        });
-
-        logs.extend(entry_logs);
+            .collect::<Vec<Value>>();
 
         let payload = json!({
             "children": logs
@@ -256,7 +236,7 @@ impl NotionClient {
             },
             "title": [{
                 "type": "text",
-                "text": { "content": "Work Log (gj)" }
+                "text": { "content": GJ_TITLE_MARKER }
             }],
             "properties": {
                 "Name": { "title": {} },
@@ -336,7 +316,7 @@ impl NotionClient {
                 .and_then(|t| t["plain_text"].as_str())
                 .unwrap_or("");
 
-            if title_text == "Work Log (gj)" {
+            if title_text == GJ_TITLE_MARKER {
                 if let Some(id) = db["id"].as_str() {
                     return Ok(Some(id.to_string()));
                 }
