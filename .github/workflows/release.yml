@@ -43,7 +43,7 @@ jobs:
         shell: bash
         run: |
           mkdir release
-          cp target/${{ matrix.target }}/release/YOUR_BINARY_NAME${{ matrix.ext }} release/
+          cp target/${{ matrix.target }}/release/gj${{ matrix.ext }} release/
 
       - name: Archive (zip)
         run: |
