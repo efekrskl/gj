@@ -5,12 +5,31 @@ Type your thoughts into the terminal — they get logged to Notion, one page per
 
 <img width="1293" alt="image" src="https://github.com/user-attachments/assets/240aec31-1cc4-4e66-9b4c-3ca75429efa3" />
 
-
 ## Install
+
+### MacOS (homebrew)
 
 ```bash
 brew tap efekrskl/gj
 brew install gj
+```
+
+### Arch Linux (build from source)
+
+_Note:_ It will probably work on other linux distributions too. But I haven't personally tested it.
+
+```bash
+git clone https://github.com/efekrskl/gj && cd gj
+cargo build --release
+cp /target/release/gj /usr/bin/
+```
+
+### Arch Linux (from AUR)
+
+You can install AUR packages either via `paru` or `yay`. The procedure is the same for both.
+
+```bash
+paru -S gj-git
 ```
 
 ## Usage
