@@ -40,12 +40,19 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Prepare zip
+        shell: bash
         run: |
           mkdir release
-          cp target/${{ matrix.target }}/release/gj${{ matrix.ext }} release/
-          cd release
-          zip ${{ matrix.target }}.zip * 
-        shell: bash
+          cp target/${{ matrix.target }}/release/YOUR_BINARY_NAME${{ matrix.ext }} release/
+
+      - name: Archive (zip)
+        run: |
+          if ($env:OS -eq "Windows_NT") {
+            Compress-Archive -Path release\* -DestinationPath release\${{ matrix.target }}.zip
+          } else {
+            zip -j release/${{ matrix.target }}.zip release/*
+          }
+        shell: pwsh
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v1
