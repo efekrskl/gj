@@ -21,7 +21,7 @@ _Note:_ It will probably work on other linux distributions too. But I haven't pe
 ```bash
 git clone https://github.com/efekrskl/gj && cd gj
 cargo build --release
-cp /target/release/gj /usr/bin/
+cp target/release/gj /usr/bin/
 ```
 
 ### Arch Linux (from AUR)
