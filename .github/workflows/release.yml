@@ -1,11 +1,9 @@
-# .github/workflows/release.yml
-
 name: Release
 
 on:
   push:
     tags:
-      - 'v*'  # Örneğin v1.0.0 gibi bir tag atıldığında çalışır
+      - 'v*'
 
 jobs:
   build:
