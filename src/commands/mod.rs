@@ -3,10 +3,10 @@ pub mod log;
 
 pub use self::log::LogCommand;
 use crate::commands::draft::DraftCommand;
+use crate::configuration::AppConfig;
 use crate::database::Database;
 use anyhow::Result;
 use clap::Subcommand;
-use crate::configuration::AppConfig;
 
 #[derive(Subcommand)]
 pub enum GjCommand {
@@ -16,7 +16,7 @@ pub enum GjCommand {
 
 pub struct Context {
     pub db: Database,
-    pub config: AppConfig
+    pub config: AppConfig,
 }
 
 impl GjCommand {

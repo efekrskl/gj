@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use chrono::NaiveDate;
+use log::debug;
 use std::process::Command;
 
 pub fn to_iso8601_timestamp(input: &str) -> Result<String> {
@@ -14,6 +15,8 @@ pub fn get_git_activity(email: &str) -> Result<String> {
     if email.is_empty() {
         return Ok("Could not detect git user.email".to_string());
     }
+
+    debug!("Running git log");
 
     let log_output = Command::new("git")
         .args([

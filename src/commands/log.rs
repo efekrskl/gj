@@ -1,5 +1,6 @@
 use crate::commands::Context;
 use clap::Args;
+use log::debug;
 
 #[derive(Args, Debug)]
 pub struct LogCommand {
@@ -10,6 +11,8 @@ pub struct LogCommand {
 
 impl LogCommand {
     pub fn execute(&self, ctx: &Context) -> anyhow::Result<()> {
+        debug!("Executing gj log");
+
         ctx.db.add_log(&self.message, self.date.clone())?;
         println!("good job, done.");
         Ok(())
