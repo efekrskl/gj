@@ -1,12 +1,11 @@
-use anyhow::{Result};
+use crate::configuration::AppConfig;
+use anyhow::Result;
+
 mod configuration;
 
-use crate::configuration::get_config;
-
 fn main() -> Result<()> {
-    let config = get_config()?;
+    env_logger::init();
+    let _config = AppConfig::load()?;
 
-    println!("{:?}", config);
-    
     Ok(())
 }
