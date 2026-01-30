@@ -1,3 +1,4 @@
+use crate::utils::to_iso8601_timestamp;
 use anyhow::{Context, Result};
 use log::debug;
 use rusqlite::Connection;
@@ -6,7 +7,6 @@ use rusqlite_migration::{M, Migrations};
 pub struct Database {
     connection: Connection,
 }
-
 
 #[derive(Debug)]
 pub struct Log {
@@ -56,14 +56,18 @@ impl Database {
         Ok(Self { connection })
     }
 
-    pub fn add_log(&self, content: &str) -> Result<()> {
+    pub fn add_log(&self, content: &str, date: Option<String>) -> Result<()> {
         let query = r#"
-         INSERT INTO logs (content, raw_context, tags, source_type)
-         VALUES (?1, '{}', '[]', ?2)"#;
+         INSERT INTO logs (content, raw_context, tags, source_type, created_at)
+         VALUES (?1, '{}', '[]', ?2, ?3)"#;
 
         debug!("Executing {query}");
 
-        self.connection.execute(query, (content, "manual"))?;
+        let date = match date {
+            Some(d) => Some(to_iso8601_timestamp(&d)?),
+            None => None,
+        };
+        self.connection.execute(query, (content, "manual", date))?;
 
         debug!("Query complete.");
 

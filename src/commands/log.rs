@@ -1,15 +1,16 @@
-use crate::database::Database;
+use crate::commands::Context;
 use clap::Args;
 
 #[derive(Args, Debug)]
 pub struct LogCommand {
+    #[arg(long, short, value_name = "DATE")]
+    pub date: Option<String>,
     pub message: String,
-    // pub date: Option<String>,
 }
 
 impl LogCommand {
-    pub fn execute(&self, db: &Database) -> anyhow::Result<()> {
-        db.add_log(&self.message)?;
+    pub fn execute(&self, ctx: Context) -> anyhow::Result<()> {
+        ctx.db.add_log(&self.message, self.date.clone())?;
         println!("good job, done.");
         Ok(())
     }
