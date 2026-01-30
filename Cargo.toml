@@ -4,3 +4,6 @@ version = "0.3.0"
 edition = "2024"
 
 [dependencies]
+config = "0.15.19"
+serde = { version = "1.0.228", features = ["derive"] }
+anyhow = "1.0.100"
