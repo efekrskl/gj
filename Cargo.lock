@@ -326,6 +326,7 @@ dependencies = [
  "env_logger",
  "log",
  "rusqlite",
+ "rusqlite_migration",
  "serde",
 ]
 
@@ -633,6 +634,16 @@ dependencies = [
  "libsqlite3-sys",
  "smallvec",
  "sqlite-wasm-rs",
+]
+
+[[package]]
+name = "rusqlite_migration"
+version = "2.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67ffe0efe8568c769d1e39c67ea2a093134afaac9bb4559246a2ee7a4d686044"
+dependencies = [
+ "log",
+ "rusqlite",
 ]
 
 [[package]]

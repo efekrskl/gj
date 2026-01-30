@@ -8,5 +8,6 @@ config = "0.15.19"
 serde = { version = "1.0.228", features = ["derive"] }
 anyhow = "1.0.100"
 rusqlite = { version = "0.38.0", features = ["bundled"] }
+rusqlite_migration = "2.4.1"
 log = "0.4.29"
 env_logger = "0.11.8"

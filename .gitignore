@@ -2,3 +2,5 @@
 
 # IDE
 /.idea
+
+*.sqlite3

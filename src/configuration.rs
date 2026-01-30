@@ -12,9 +12,11 @@ pub struct User {
 
 #[derive(Deserialize, Serialize, Debug, Default)]
 pub struct Database {
-    #[serde(default)]
+    #[serde(default = "database_filename")]
     pub filename: String,
 }
+#[rustfmt::skip]
+fn database_filename() -> String { String::from("gj.sqlite3") }
 
 #[derive(Deserialize, Serialize, Debug, Default)]
 pub struct AppConfig {
