@@ -6,6 +6,7 @@ use crate::commands::draft::DraftCommand;
 use crate::database::Database;
 use anyhow::Result;
 use clap::Subcommand;
+use crate::configuration::AppConfig;
 
 #[derive(Subcommand)]
 pub enum GjCommand {
@@ -15,13 +16,14 @@ pub enum GjCommand {
 
 pub struct Context {
     pub db: Database,
+    pub config: AppConfig
 }
 
 impl GjCommand {
-    pub fn execute(&self, ctx: Context) -> Result<()> {
+    pub fn execute(&self, ctx: &Context) -> Result<()> {
         match self {
-            GjCommand::Log(cmd) => cmd.execute(ctx),
-            GjCommand::Draft(cmd) => cmd.execute(ctx),
+            GjCommand::Log(cmd) => cmd.execute(&ctx),
+            GjCommand::Draft(cmd) => cmd.execute(&ctx),
         }
     }
 }

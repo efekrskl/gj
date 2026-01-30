@@ -19,12 +19,21 @@ pub struct Database {
 fn database_filename() -> String { String::from("gj.sqlite3") }
 
 #[derive(Deserialize, Serialize, Debug, Default)]
+pub struct Options {
+    #[serde()]
+    pub draft_from_git: Option<bool>,
+}
+#
+[derive(Deserialize, Serialize, Debug, Default)]
 pub struct AppConfig {
     #[serde(default)]
     pub user: User,
 
     #[serde(default)]
     pub database: Database,
+
+    #[serde(default)]
+    pub options: Options,
 }
 
 impl AppConfig {

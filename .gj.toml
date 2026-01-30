@@ -1,4 +1,8 @@
 [user]
-email = "asd"
+email = "dogukankrskl@gmail.com"
 
 [database]
+filename = "gj.sqlite3"
+
+[options]
+draft_from_git = true

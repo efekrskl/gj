@@ -27,10 +27,10 @@ struct Cli {
 fn main() -> Result<()> {
     env_logger::init();
     let config = AppConfig::load()?;
-    let db = Database::open(config.database.filename)?;
+    let db = Database::open(&config.database.filename)?;
 
     let cli = Cli::parse();
-    let ctx = Context { db };
+    let ctx = Context { db, config };
 
     let cmd_to_run = if let Some(cmd) = cli.command {
         Some(cmd)
@@ -44,9 +44,9 @@ fn main() -> Result<()> {
     };
 
     match cmd_to_run {
-        Some(cmd) => cmd.execute(ctx)?,
+        Some(cmd) => cmd.execute(&ctx)?,
         None => {
-            DraftCommand::default().execute(ctx)?;
+            DraftCommand::default().execute(&ctx)?;
             let _ = Cli::command().print_help();
         }
     }

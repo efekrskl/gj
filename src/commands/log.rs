@@ -9,7 +9,7 @@ pub struct LogCommand {
 }
 
 impl LogCommand {
-    pub fn execute(&self, ctx: Context) -> anyhow::Result<()> {
+    pub fn execute(&self, ctx: &Context) -> anyhow::Result<()> {
         ctx.db.add_log(&self.message, self.date.clone())?;
         println!("good job, done.");
         Ok(())

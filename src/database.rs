@@ -35,7 +35,7 @@ const MIGRATIONS_SLICE: &[M<'_>] = &[M::up(
 const MIGRATIONS: Migrations<'_> = Migrations::from_slice(MIGRATIONS_SLICE);
 
 impl Database {
-    pub fn open(sqlite_filename: String) -> Result<Database> {
+    pub fn open(sqlite_filename: &String) -> Result<Database> {
         let mut connection =
             Connection::open(sqlite_filename).context("Couldn't open the sqlite file.")?;
 
