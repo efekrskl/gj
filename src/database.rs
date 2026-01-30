@@ -4,7 +4,19 @@ use rusqlite::Connection;
 use rusqlite_migration::{M, Migrations};
 
 pub struct Database {
-    pub connection: Connection,
+    connection: Connection,
+}
+
+
+#[derive(Debug)]
+pub struct Log {
+    pub id: i64,
+    pub content: String,
+    // raw_context: String,
+    // tags: String,
+    // source_type: String,
+    // created_at: i64,
+    // updated_at: i64,
 }
 
 const MIGRATIONS_SLICE: &[M<'_>] = &[M::up(
@@ -42,5 +54,40 @@ impl Database {
         debug!("Migrations are complete.");
 
         Ok(Self { connection })
+    }
+
+    pub fn add_log(&self, content: &str) -> Result<()> {
+        let query = r#"
+         INSERT INTO logs (content, raw_context, tags, source_type)
+         VALUES (?1, '{}', '[]', ?2)"#;
+
+        debug!("Executing {query}");
+
+        self.connection.execute(query, (content, "manual"))?;
+
+        debug!("Query complete.");
+
+        Ok(())
+    }
+
+    pub fn get_recent_logs(&self) -> Result<Vec<Log>> {
+        let query = "SELECT id, content FROM logs LIMIT 10";
+
+        debug!("Preparing {query}");
+
+        let mut statement = self.connection.prepare(query)?;
+        let rows = statement
+            .query_map([], |row| {
+                Ok(Log {
+                    id: row.get(0)?,
+                    content: row.get(1)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()
+            .context("Failed to fetch logs.")?;
+
+        debug!("Query complete.");
+
+        Ok(rows)
     }
 }
