@@ -4,11 +4,13 @@ use crate::configuration::AppConfig;
 use crate::database::Database;
 use anyhow::Result;
 use clap::{CommandFactory, Parser};
+use crate::ai::AiClient;
 
 mod commands;
 mod configuration;
 mod database;
 mod utils;
+mod ai;
 
 #[derive(Parser)]
 #[command(name = "gj", version, about = "gj \nTerminal-first journaling.")]
@@ -28,9 +30,10 @@ fn main() -> Result<()> {
     env_logger::init();
     let config = AppConfig::load()?;
     let db = Database::open(&config.database.filename)?;
+    let ai_client =  AiClient::new(config.options.ollama_model.clone());
 
     let cli = Cli::parse();
-    let ctx = Context { db, config };
+    let ctx = Context { db, config, ai_client };
 
     let cmd_to_run = if let Some(cmd) = cli.command {
         Some(cmd)

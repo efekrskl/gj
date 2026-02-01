@@ -6,3 +6,5 @@ filename = "gj.sqlite3"
 
 [options]
 draft_from_git = true
+draft_with_ollama = true
+ollama_model = "llama3.2"

@@ -22,6 +22,15 @@ fn database_filename() -> String { String::from("gj.sqlite3") }
 pub struct Options {
     #[serde()]
     pub draft_from_git: Option<bool>,
+
+    #[serde()]
+    pub draft_with_ollama: Option<bool>,
+
+    #[serde()]
+    pub redact_sensitive_info_ollama: Option<bool>,
+
+    #[serde()]
+    pub ollama_model: Option<String>
 }
 #
 [derive(Deserialize, Serialize, Debug, Default)]

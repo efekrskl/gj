@@ -3,4 +3,4 @@
 # IDE
 /.idea
 
-*.sqlite3
+*.sqlite3*

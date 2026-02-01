@@ -1,4 +1,5 @@
 use crate::commands::Context;
+use crate::database::SourceType;
 use clap::Args;
 use log::debug;
 
@@ -13,8 +14,11 @@ impl LogCommand {
     pub fn execute(&self, ctx: &Context) -> anyhow::Result<()> {
         debug!("Executing gj log");
 
-        ctx.db.add_log(&self.message, self.date.clone())?;
+        ctx.db
+            .add_log(&self.message, self.date.clone(), SourceType::Log)?;
+        
         println!("good job, done.");
+
         Ok(())
     }
 }

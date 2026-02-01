@@ -2,19 +2,34 @@ use crate::utils::to_iso8601_timestamp;
 use anyhow::{Context, Result};
 use log::debug;
 use rusqlite::Connection;
+use rusqlite::OptionalExtension;
 use rusqlite_migration::{M, Migrations};
 
 pub struct Database {
     connection: Connection,
 }
 
+pub enum SourceType {
+    Log,
+    Draft,
+}
+
+impl SourceType {
+    fn as_str(&self) -> &'static str {
+        match self {
+            SourceType::Draft => "draft",
+            SourceType::Log => "log",
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Log {
     pub id: i64,
     pub content: String,
+    source_type: String,
     // raw_context: String,
     // tags: String,
-    // source_type: String,
     // created_at: i64,
     // updated_at: i64,
 }
@@ -56,26 +71,49 @@ impl Database {
         Ok(Self { connection })
     }
 
-    pub fn add_log(&self, content: &str, date: Option<String>) -> Result<()> {
+    pub fn add_log(
+        &self,
+        content: &str,
+        date: Option<String>,
+        source_type: SourceType,
+    ) -> Result<()> {
         let query = r#"
          INSERT INTO logs (content, raw_context, tags, source_type, created_at)
-         VALUES (?1, '{}', '[]', ?2, ?3)"#;
+         VALUES (?1, '{}', '[]', ?2, COALESCE(?3, CURRENT_TIMESTAMP))"#;
 
-        debug!("Executing {query}");
 
         let date = match date {
             Some(d) => Some(to_iso8601_timestamp(&d)?),
             None => None,
         };
-        self.connection.execute(query, (content, "manual", date))?;
+
+        debug!("Executing {query} with args {:?}", (content, source_type.as_str(), &date));
+
+        self.connection
+            .execute(query, (content, source_type.as_str(), date))?;
 
         debug!("Query complete.");
 
         Ok(())
     }
 
+    pub fn get_latest_draft_log_date(&self) -> Option<String> {
+        let query = r#"SELECT created_at FROM logs
+                   WHERE source_type = ?1
+                   ORDER BY created_at DESC
+                   LIMIT 1"#;
+        let log: Option<String> = self
+            .connection
+            .query_row(query, [SourceType::Draft.as_str()], |row| row.get(0))
+            .optional()
+            .ok()
+            .flatten();
+
+        log
+    }
+
     pub fn get_recent_logs(&self) -> Result<Vec<Log>> {
-        let query = "SELECT id, content FROM logs LIMIT 10";
+        let query = "SELECT id, content, source_type FROM logs LIMIT 10";
 
         debug!("Preparing {query}");
 
@@ -85,6 +123,7 @@ impl Database {
                 Ok(Log {
                     id: row.get(0)?,
                     content: row.get(1)?,
+                    source_type: row.get(2)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()

@@ -11,24 +11,27 @@ pub fn to_iso8601_timestamp(input: &str) -> Result<String> {
     Ok(datetime.format("%Y-%m-%dT%H:%M:%S").to_string())
 }
 
-pub fn get_git_activity(email: &str) -> Result<String> {
+pub fn get_git_activity(email: &str, since: Option<String>) -> Result<String> {
     if email.is_empty() {
         return Ok("Could not detect git user.email".to_string());
     }
+    let since = since.unwrap_or("midnight".to_string());
 
-    debug!("Running git log");
+    debug!("Running git log since: {since} email: {email}");
 
     let log_output = Command::new("git")
         .args([
             "log",
             &format!("--author={}", email),
-            "--since=midnight",
+            &format!("--since={}", since),
             "--all",
             "--no-merges",
             "--pretty=format:- %s",
         ])
         .output()
         .context("Failed to run git log")?;
+
+    debug!("Git log output: {:?}", log_output);
 
     let logs = String::from_utf8_lossy(&log_output.stdout).to_string();
 

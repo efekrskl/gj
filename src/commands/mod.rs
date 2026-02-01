@@ -7,6 +7,7 @@ use crate::configuration::AppConfig;
 use crate::database::Database;
 use anyhow::Result;
 use clap::Subcommand;
+use crate::ai::AiClient;
 
 #[derive(Subcommand)]
 pub enum GjCommand {
@@ -17,6 +18,7 @@ pub enum GjCommand {
 pub struct Context {
     pub db: Database,
     pub config: AppConfig,
+    pub ai_client: AiClient
 }
 
 impl GjCommand {
