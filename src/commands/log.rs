@@ -1,7 +1,7 @@
-use crate::commands::Context;
 use crate::database::SourceType;
 use clap::Args;
 use log::debug;
+use crate::Context;
 
 #[derive(Args, Debug)]
 pub struct LogCommand {

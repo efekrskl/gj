@@ -1,12 +1,9 @@
-use crate::commands::Context;
-use crate::utils::get_git_activity;
-use clap::Args;
-use log::debug;
 use crate::database::SourceType;
+use crate::utils::get_git_activity;
+use log::debug;
+use crate::Context;
 
-#[derive(Args, Debug)]
 pub struct DraftCommand {
-    #[arg(long, short, value_name = "DATE")]
     pub date: Option<String>,
 }
 
@@ -29,14 +26,9 @@ impl DraftCommand {
         }
         let edited = edit::edit(template)?;
 
-        ctx.db.add_log(&edited, self.date.clone(), SourceType::Draft)?;
+        ctx.db
+            .add_log(&edited, self.date.clone(), SourceType::Draft)?;
 
         Ok(())
-    }
-}
-
-impl Default for DraftCommand {
-    fn default() -> Self {
-        Self { date: None }
     }
 }
