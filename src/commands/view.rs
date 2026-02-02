@@ -1,14 +1,16 @@
 use crate::Context;
 use crate::database::Log;
+use crate::utils::{logs_by_day_map, logs_to_list_items};
 use anyhow::Result;
 use clap::Args;
 use ratatui::Frame;
 use ratatui::crossterm::event;
 use ratatui::crossterm::event::{Event, KeyCode, KeyEventKind};
-use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::prelude::{Color, Modifier, Style};
 use ratatui::widgets::calendar::{CalendarEventStore, Monthly};
-use ratatui::widgets::{Block, BorderType, Borders, ListState, Paragraph};
+use ratatui::widgets::{Block, BorderType, Borders, List, ListItem, ListState, Paragraph};
+use std::collections::BTreeMap;
 use time::{Date, Duration, Month, OffsetDateTime};
 
 #[derive(Args, Debug)]
@@ -20,6 +22,7 @@ impl ViewCommand {
             .unwrap_or(OffsetDateTime::now_utc())
             .date();
         let logs = ctx.db.get_logs_by_year(today.year())?;
+
         let result = run_calendar(logs, today);
 
         Ok(())
@@ -35,7 +38,7 @@ struct CalendarState {
     cursor: Date,
     focus: Focus,
     entry_state: ListState,
-    logs: Vec<Log>,
+    logs: BTreeMap<Date, Vec<Log>>,
 }
 
 impl CalendarState {
@@ -48,7 +51,7 @@ impl CalendarState {
                 s.select(Some(0));
                 s
             },
-            logs,
+            logs: logs_by_day_map(logs).unwrap_or_default(),
         }
     }
 
@@ -59,6 +62,56 @@ impl CalendarState {
             Layout::vertical([Constraint::Min(1), Constraint::Length(2)]).areas(area);
         let [calendar_area, preview_area] =
             Layout::horizontal([Constraint::Length(96), Constraint::Min(20)]).areas(content_area);
+
+        self.draw_footer(frame, footer_area);
+        self.draw_calendar(frame, calendar_area);
+        self.draw_preview(frame, preview_area);
+    }
+
+    fn draw_preview(&self, frame: &mut Frame, area: Rect) {
+        let [entry_list_area, entry_preview_area] = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(11), Constraint::Min(5)])
+            .areas(area);
+
+        let list_border = if self.focus == Focus::Entries {
+            Style::default().fg(Color::Cyan)
+        } else {
+            Style::default().fg(Color::DarkGray)
+        };
+
+        let empty_vec = vec![];
+        let items: Vec<ListItem> =
+            logs_to_list_items(self.logs.get(&self.cursor).unwrap_or(&empty_vec));
+
+        let list = List::new(items)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(" Entries ")
+                    .border_style(list_border),
+            )
+            .highlight_style(Style::default().bg(Color::Blue).fg(Color::White))
+            .highlight_symbol("▶ ");
+
+        frame.render_stateful_widget(list, entry_list_area, &mut self.entry_state.clone());
+    }
+
+    fn draw_footer(&self, frame: &mut Frame, area: Rect) {
+        let status = match self.focus {
+            Focus::Calendar => {
+                "YEAR | ←→ day  ↑↓ week  PgUp/PgDn month  Tab entries  t today  q quit"
+            }
+            Focus::Entries => "YEAR | ↑↓ select entry  Tab calendar  q quit",
+        };
+
+        frame.render_widget(
+            Paragraph::new(status).block(Block::default().borders(Borders::TOP)),
+            area,
+        );
+    }
+
+    fn draw_calendar(&self, frame: &mut Frame, area: Rect) {
         let mut store = CalendarEventStore::default();
 
         let today = OffsetDateTime::now_local()
@@ -78,7 +131,7 @@ impl CalendarState {
         let rows = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(12); 3])
-            .split(calendar_area);
+            .split(area);
 
         let year = self.cursor.year();
         const COL_PER_ROW: usize = 4;
@@ -117,18 +170,6 @@ impl CalendarState {
                 frame.render_widget(cal, *col_area);
             }
         }
-
-        let status = match self.focus {
-            Focus::Calendar => {
-                "YEAR | ←→ day  ↑↓ week  PgUp/PgDn month  Tab entries  t today  q quit"
-            }
-            Focus::Entries => "YEAR | ↑↓ select entry  Tab calendar  q quit",
-        };
-
-        frame.render_widget(
-            Paragraph::new(status).block(Block::default().borders(Borders::TOP)),
-            footer_area,
-        );
     }
 }
 
@@ -154,6 +195,11 @@ pub fn run_calendar(logs: Vec<Log>, today: Date) -> Result<()> {
                     // todo: improve this by actually navigating a month
                     KeyCode::PageUp => state.cursor.checked_sub(Duration::days(31)),
                     KeyCode::PageDown => state.cursor.checked_add(Duration::days(31)),
+
+                    KeyCode::Tab => {
+                        state.focus = Focus::Entries;
+                        None
+                    }
                     _ => Some(state.cursor),
                 };
 
@@ -161,6 +207,11 @@ pub fn run_calendar(logs: Vec<Log>, today: Date) -> Result<()> {
                     state.cursor = date;
                 }
             } else {
+                match key.code {
+                    KeyCode::Char('q') => break,
+                    KeyCode::Tab => state.focus = Focus::Calendar,
+                    _ => {}
+                }
             }
         }
     }

@@ -1,8 +1,12 @@
+use crate::database::Log;
 use anyhow::{Context, Result};
 use chrono::NaiveDate;
 use log::debug;
+use ratatui::prelude::{Color, Line, Span, Style};
+use ratatui::widgets::ListItem;
+use std::collections::BTreeMap;
 use std::process::Command;
-use time::{Date, Duration};
+use time::{Date, PrimitiveDateTime, format_description};
 
 pub fn to_iso8601_timestamp(input: &str) -> Result<String> {
     let date = NaiveDate::parse_from_str(input.trim(), "%d.%m.%Y")
@@ -41,4 +45,43 @@ pub fn get_git_activity(email: &str, since: Option<String>) -> Result<String> {
     } else {
         Ok(logs)
     }
+}
+
+pub fn logs_to_list_items(logs: &[Log]) -> Vec<ListItem> {
+    let fmt = format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]").unwrap();
+
+    let logs = logs
+        .iter()
+        .map(|log| {
+            let date_time = PrimitiveDateTime::parse(&log.created_at, &fmt)
+                .map(|dt| dt.time())
+                .ok();
+            let time_str = date_time
+                .map(|t| format!("{:02}:{:02}", t.hour(), t.minute()))
+                .unwrap_or_else(|| "??:??".to_string());
+
+            ListItem::new(Line::from(vec![
+                Span::styled(
+                    format!("{} ", time_str),
+                    Style::default().fg(Color::DarkGray),
+                ),
+                Span::raw(&log.content),
+            ]))
+        })
+        .collect();
+
+    logs
+}
+
+pub fn logs_by_day_map(logs: Vec<Log>) -> Result<BTreeMap<Date, Vec<Log>>> {
+    let mut map: BTreeMap<Date, Vec<Log>> = BTreeMap::new();
+
+    for log in logs {
+        let fmt = format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")?;
+        let date = PrimitiveDateTime::parse(&log.created_at, &fmt)?.date();
+
+        map.entry(date).or_default().push(log);
+    }
+
+    Ok(map)
 }

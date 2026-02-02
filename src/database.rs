@@ -30,8 +30,8 @@ pub struct Log {
     source_type: String,
     // raw_context: String,
     // tags: String,
-    // created_at: i64,
-    // updated_at: i64,
+    pub created_at: String,
+    // updated_at: String,
 }
 
 const MIGRATIONS_SLICE: &[M<'_>] = &[M::up(
@@ -116,7 +116,7 @@ impl Database {
 
     pub fn get_logs_by_year(&self, year: i32) -> Result<Vec<Log>> {
         let query =
-            "SELECT id, content, source_type FROM logs WHERE strftime('%Y', created_at) = ?1";
+            "SELECT id, content, source_type, created_at FROM logs WHERE strftime('%Y', created_at) = ?1";
 
         debug!("Preparing {query}");
 
@@ -127,6 +127,7 @@ impl Database {
                     id: row.get(0)?,
                     content: row.get(1)?,
                     source_type: row.get(2)?,
+                    created_at: row.get(3)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()
