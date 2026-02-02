@@ -81,13 +81,15 @@ impl Database {
          INSERT INTO logs (content, raw_context, tags, source_type, created_at)
          VALUES (?1, '{}', '[]', ?2, COALESCE(?3, CURRENT_TIMESTAMP))"#;
 
-
         let date = match date {
             Some(d) => Some(to_iso8601_timestamp(&d)?),
             None => None,
         };
 
-        debug!("Executing {query} with args {:?}", (content, source_type.as_str(), &date));
+        debug!(
+            "Executing {query} with args {:?}",
+            (content, source_type.as_str(), &date)
+        );
 
         self.connection
             .execute(query, (content, source_type.as_str(), date))?;
@@ -112,14 +114,15 @@ impl Database {
         log
     }
 
-    pub fn get_recent_logs(&self) -> Result<Vec<Log>> {
-        let query = "SELECT id, content, source_type FROM logs LIMIT 10";
+    pub fn get_logs_by_year(&self, year: i32) -> Result<Vec<Log>> {
+        let query =
+            "SELECT id, content, source_type FROM logs WHERE strftime('%Y', created_at) = ?1";
 
         debug!("Preparing {query}");
 
         let mut statement = self.connection.prepare(query)?;
         let rows = statement
-            .query_map([], |row| {
+            .query_map([year.to_string()], |row| {
                 Ok(Log {
                     id: row.get(0)?,
                     content: row.get(1)?,
