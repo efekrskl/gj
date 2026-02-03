@@ -28,7 +28,6 @@ pub struct Log {
     pub id: i64,
     pub content: String,
     source_type: String,
-    // raw_context: String,
     // tags: String,
     pub created_at: String,
     // updated_at: String,
@@ -71,23 +70,17 @@ impl Database {
         Ok(Self { connection })
     }
 
-    pub fn update_log(
-        &self,
-        id: i64,
-        content: &str,
-    ) -> Result<()> {
+    pub fn update_log(&self, id: i64, content: &str) -> Result<()> {
         let query = r#"
         UPDATE logs
-        SET content = ?1
-        WHERE id = ?2"#;
+        SET content = ?1, updated_at = ?2
+        WHERE id = ?3"#;
 
-        debug!(
-            "Executing {query} with args {:?}",
-            (id, content)
-        );
+        let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
-        self.connection
-            .execute(query, (content, id))?;
+        debug!("Executing {query} with args {:?}", (id, &now, content));
+
+        self.connection.execute(query, (content, now, id))?;
 
         debug!("Query complete.");
 
@@ -138,8 +131,7 @@ impl Database {
     }
 
     pub fn get_logs_by_year(&self, year: i32) -> Result<Vec<Log>> {
-        let query =
-            "SELECT id, content, source_type, created_at FROM logs WHERE strftime('%Y', created_at) = ?1";
+        let query = "SELECT id, content, source_type, created_at FROM logs WHERE strftime('%Y', created_at) = ?1";
 
         debug!("Preparing {query}");
 
