@@ -71,6 +71,29 @@ impl Database {
         Ok(Self { connection })
     }
 
+    pub fn update_log(
+        &self,
+        id: i64,
+        content: &str,
+    ) -> Result<()> {
+        let query = r#"
+        UPDATE logs
+        SET content = ?1
+        WHERE id = ?2"#;
+
+        debug!(
+            "Executing {query} with args {:?}",
+            (id, content)
+        );
+
+        self.connection
+            .execute(query, (content, id))?;
+
+        debug!("Query complete.");
+
+        Ok(())
+    }
+
     pub fn add_log(
         &self,
         content: &str,
