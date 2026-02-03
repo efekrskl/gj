@@ -73,14 +73,12 @@ impl Database {
     pub fn update_log(&self, id: i64, content: &str) -> Result<()> {
         let query = r#"
         UPDATE logs
-        SET content = ?1, updated_at = ?2
-        WHERE id = ?3"#;
+        SET content = ?1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?2"#;
 
-        let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        debug!("Executing {query} with args {:?}", (id, content));
 
-        debug!("Executing {query} with args {:?}", (id, &now, content));
-
-        self.connection.execute(query, (content, now, id))?;
+        self.connection.execute(query, (content, id))?;
 
         debug!("Query complete.");
 
