@@ -1,4 +1,4 @@
-use crate::utils::to_iso8601_timestamp;
+use crate::utils::to_sqlite_timestamp;
 use anyhow::{Context, Result};
 use log::debug;
 use rusqlite::Connection;
@@ -96,7 +96,7 @@ impl Database {
          VALUES (?1, '{}', '[]', ?2, COALESCE(?3, CURRENT_TIMESTAMP))"#;
 
         let date = match date {
-            Some(d) => Some(to_iso8601_timestamp(&d)?),
+            Some(d) => Some(to_sqlite_timestamp(&d)?),
             None => None,
         };
 

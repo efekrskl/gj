@@ -8,12 +8,12 @@ use std::collections::BTreeMap;
 use std::process::Command;
 use time::{Date, PrimitiveDateTime, format_description};
 
-pub fn to_iso8601_timestamp(input: &str) -> Result<String> {
+pub fn to_sqlite_timestamp(input: &str) -> Result<String> {
     let date = NaiveDate::parse_from_str(input.trim(), "%d.%m.%Y")
         .context("Invalid date format. Please use DD.MM.YYYY.")?;
     let datetime = date.and_hms_opt(0, 0, 0).unwrap();
 
-    Ok(datetime.format("%Y-%m-%dT%H:%M:%S").to_string())
+    Ok(datetime.format("%Y-%m-%d %H:%M:%S").to_string())
 }
 
 pub fn get_git_activity(email: &str, since: Option<String>) -> Result<String> {
