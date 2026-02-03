@@ -112,13 +112,11 @@ impl CalendarState {
     }
 
     fn draw_calendar(&self, frame: &mut Frame, area: Rect) {
-        let mut store = CalendarEventStore::default();
+        let mut store = CalendarEventStore::today(Style::default().bg(Color::DarkGray));
 
-        let today = OffsetDateTime::now_local()
-            .unwrap_or(OffsetDateTime::now_utc())
-            .date();
-
-        store.add(today, Style::default().bg(Color::DarkGray));
+        for date in self.logs.keys() {
+            store.add(*date, Style::default().fg(Color::Green))
+        }
 
         store.add(
             self.cursor,
@@ -192,6 +190,7 @@ pub fn run_calendar(logs: Vec<Log>, today: Date) -> Result<()> {
                     KeyCode::Right => state.cursor.checked_add(Duration::days(1)),
                     KeyCode::Up => state.cursor.checked_sub(Duration::days(7)),
                     KeyCode::Down => state.cursor.checked_add(Duration::days(7)),
+                    KeyCode::Char('t') => Some(today),
                     // todo: improve this by actually navigating a month
                     KeyCode::PageUp => state.cursor.checked_sub(Duration::days(31)),
                     KeyCode::PageDown => state.cursor.checked_add(Duration::days(31)),
@@ -210,6 +209,9 @@ pub fn run_calendar(logs: Vec<Log>, today: Date) -> Result<()> {
                 match key.code {
                     KeyCode::Char('q') => break,
                     KeyCode::Tab => state.focus = Focus::Calendar,
+                    KeyCode::Up => state.entry_state.select_previous(),
+                    KeyCode::Down => state.entry_state.select_next(),
+
                     _ => {}
                 }
             }
@@ -218,4 +220,14 @@ pub fn run_calendar(logs: Vec<Log>, today: Date) -> Result<()> {
 
     ratatui::restore();
     Ok(())
+}
+
+fn clamp_entry_selection(state: &mut CalendarState) {
+    let len = state.logs.get(&state.cursor).unwrap_or(&vec![]).len();
+    if len == 0 {
+        &state.entry_state.select(None);
+        return;
+    }
+    let cur = state.entry_state.selected().unwrap_or(0);
+    state.entry_state.select(Some(cur.min(len - 1)));
 }
