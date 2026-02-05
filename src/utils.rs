@@ -16,6 +16,13 @@ pub fn to_sqlite_timestamp(input: &str) -> Result<String> {
     Ok(datetime.format("%Y-%m-%d %H:%M:%S").to_string())
 }
 
+pub fn to_date_key(input: &str) -> Result<String> {
+    let date = NaiveDate::parse_from_str(input.trim(), "%Y-%m-%d %H:%M:%S")
+        .context("Invalid date format. Please use DD.MM.YYYY.")?;
+
+    Ok(date.format("%Y-%m-%d").to_string())
+}
+
 pub fn get_git_activity(email: &str, since: Option<String>) -> Result<String> {
     if email.is_empty() {
         return Ok("Could not detect git user.email".to_string());

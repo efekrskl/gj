@@ -4,3 +4,5 @@
 /.idea
 
 *.sqlite3*
+
+.gj.toml

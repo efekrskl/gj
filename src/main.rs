@@ -1,6 +1,7 @@
 use crate::ai::AiClient;
 use crate::commands::LogCommand;
 use crate::commands::draft::DraftCommand;
+use crate::commands::push::{PushCommand, PushTarget};
 use crate::commands::view::ViewCommand;
 use crate::configuration::AppConfig;
 use crate::database::Database;
@@ -34,6 +35,10 @@ enum Command {
         date: Option<String>,
     },
     View,
+    Push {
+        #[arg(value_enum)]
+        target: PushTarget,
+    },
 }
 
 pub struct Context {
@@ -67,9 +72,10 @@ fn main() -> Result<()> {
             DraftCommand { date }.execute(&ctx)?;
         }
         Command::View => {
-            let _ = ViewCommand {}.execute(&ctx);
-
-            return Ok(());
+            ViewCommand {}.execute(&ctx)?;
+        }
+        Command::Push { target } => {
+            PushCommand { target }.execute(&ctx)?;
         }
     }
 

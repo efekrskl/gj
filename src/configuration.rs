@@ -30,10 +30,22 @@ pub struct Options {
     pub redact_sensitive_info_ollama: Option<bool>,
 
     #[serde()]
-    pub ollama_model: Option<String>
+    pub ollama_model: Option<String>,
 }
-#
-[derive(Deserialize, Serialize, Debug, Default)]
+
+#[derive(Deserialize, Serialize, Debug, Default)]
+pub struct NotionConfig {
+    #[serde()]
+    api_key: String,
+}
+
+#[derive(Deserialize, Serialize, Debug, Default)]
+pub struct Push {
+    #[serde(default)]
+    pub notion: NotionConfig,
+}
+
+#[derive(Deserialize, Serialize, Debug, Default)]
 pub struct AppConfig {
     #[serde(default)]
     pub user: User,
@@ -43,6 +55,9 @@ pub struct AppConfig {
 
     #[serde(default)]
     pub options: Options,
+
+    #[serde(default)]
+    pub push: Push,
 }
 
 impl AppConfig {
