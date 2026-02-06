@@ -6,6 +6,7 @@ use ratatui::prelude::{Color, Line, Span, Style};
 use ratatui::widgets::ListItem;
 use std::collections::BTreeMap;
 use std::process::Command;
+use blake3::Hasher;
 use time::{Date, PrimitiveDateTime, format_description};
 
 pub fn to_sqlite_timestamp(input: &str) -> Result<String> {
@@ -91,4 +92,24 @@ pub fn logs_by_day_map(logs: Vec<Log>) -> Result<BTreeMap<Date, Vec<Log>>> {
     }
 
     Ok(map)
+}
+
+pub fn build_day_content_string(date: &str, logs: &[Log]) -> String {
+    let mut str = String::new();
+
+    str.push_str(date);
+    str.push('\n');
+
+    for log in logs {
+        str.push_str(&log.content);
+        str.push('\n');
+    }
+
+    str
+}
+
+pub fn hash_content(s: &str) -> String {
+    let mut hasher = Hasher::new();
+    hasher.update(s.as_bytes());
+    hasher.finalize().to_hex().to_string()
 }

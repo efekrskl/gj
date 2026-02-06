@@ -40,33 +40,7 @@ pub struct LogPreview {
     created_at: String,
 }
 
-#[derive(Debug)]
-pub struct SyncState {
-    adapter: String,
-    last_synced_at: Option<String>,
-}
-#[derive(Debug)]
-pub struct SyncUnit {
-    pub id: i64,
-    pub adapter: String,
-    pub unit_type: String,
-    pub local_key: String,
-    pub remote_key: Option<String>,
-    pub content_hash: String,
-    pub status: String,
-    pub last_error: Option<String>,
-    pub created_at: String,
-    pub last_synced_at: Option<String>,
-}
-
-#[derive(Debug)]
-pub struct SyncUnitPreview {
-    pub local_key: String,
-    pub remote_key: Option<String>,
-    pub content_hash: String,
-    pub status: String,
-    pub last_synced_at: Option<String>,
-}
+// todo: improve the dtos
 
 const MIGRATIONS_SLICE: &[M<'_>] = &[
     M::up(
@@ -89,7 +63,7 @@ const MIGRATIONS_SLICE: &[M<'_>] = &[
     local_key TEXT NOT NULL,     -- date / id i.e. '2026-02-03' / '4212323'
     remote_key TEXT,
     content_hash TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'success', -- 'success' / 'failed',
+    status TEXT NOT NULL DEFAULT 'success', -- 'success' / 'fail',
     last_error TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     last_synced_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -100,10 +74,10 @@ const MIGRATIONS_SLICE: &[M<'_>] = &[
     ),
     M::up(
         r#"
-        CREATE TABLE sync_state (
-        adapter TEXT PRIMARY KEY,      -- 'notion'
-        last_synced_at DATETIME
-        );
+    CREATE TABLE sync_state (
+    adapter TEXT PRIMARY KEY,      -- 'notion'
+    last_synced_at DATETIME
+    );
         "#,
     ),
 ];
@@ -214,6 +188,54 @@ impl Database {
         Ok(rows)
     }
 }
+#[derive(Debug)]
+pub struct SyncState {
+    adapter: String,
+    last_synced_at: Option<String>,
+}
+#[derive(Debug)]
+pub struct SyncUnit {
+    pub id: i64,
+    pub adapter: String,
+    pub unit_type: String,
+    pub local_key: String,
+    pub remote_key: Option<String>,
+    pub content_hash: String,
+    pub status: String,
+    pub last_error: Option<String>,
+    pub created_at: String,
+    pub last_synced_at: Option<String>,
+}
+
+#[derive(Debug)]
+pub struct SyncUnitPreview {
+    pub local_key: String,
+    pub remote_key: Option<String>,
+    pub content_hash: String,
+    pub status: String,
+    pub last_synced_at: Option<String>,
+}
+
+pub struct CreateSyncUnit {
+    pub adapter: String,
+    pub unit_type: String,
+    pub local_key: String,
+    pub remote_key: Option<String>,
+    pub content_hash: String,
+    pub status: String,
+    pub last_error: Option<String>,
+}
+
+pub struct UpdateSyncUnit {
+    pub local_key: String,
+    pub adapter: String,
+    pub unit_type: String,
+    pub remote_key: Option<String>,
+    pub content_hash: String,
+    pub status: String,
+    pub last_error: Option<String>,
+}
+
 
 // Sync Push
 impl Database {
@@ -393,5 +415,74 @@ impl Database {
 
         debug!("[push] sync_units_map_size={}", map.len());
         map
+    }
+    pub fn create_sync_unit(&self, unit: &CreateSyncUnit) -> Result<()> {
+        let query = r#"
+            INSERT INTO sync_units (adapter, unit_type, local_key, remote_key, content_hash, status, last_error)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+        "#;
+
+        debug!("[push] create_sync_unit={}", query.trim());
+
+        self.connection.execute(
+            query,
+            params![
+                unit.adapter,
+                unit.unit_type,
+                unit.local_key,
+                unit.remote_key,
+                unit.content_hash,
+                unit.status,
+                unit.last_error,
+            ],
+        )?;
+
+        debug!("[push] created sync unit with local_key {}", unit.local_key);
+
+        Ok(())
+    }
+
+    pub fn update_sync_unit(&self, unit: &UpdateSyncUnit) -> Result<()> {
+        let query = r#"
+            UPDATE sync_units
+            SET remote_key = ?1,
+                content_hash = ?2,
+                status = ?3,
+                last_error = ?4,
+                last_synced_at = CURRENT_TIMESTAMP
+            WHERE adapter = ?5 AND unit_type = ?6 AND local_key = ?7
+        "#;
+
+        debug!("[push] update_sync_unit local_key={}", unit.local_key);
+
+        self.connection.execute(
+            query,
+            params![
+                unit.remote_key,
+                unit.content_hash,
+                unit.status,
+                unit.last_error,
+                unit.adapter,
+                unit.unit_type,
+                unit.local_key,
+            ],
+        )?;
+
+        Ok(())
+    }
+}
+
+impl Database {
+    pub fn upsert_sync_state(&self, adapter: &str) -> Result<()> {
+        let query = r#"
+        INSERT INTO sync_state (adapter, last_synced_at)
+        VALUES (?1, CURRENT_TIMESTAMP)
+        ON CONFLICT(adapter) DO UPDATE SET
+            last_synced_at = CURRENT_TIMESTAMP
+        "#;
+
+        self.connection.execute(query, params![adapter])?;
+
+        Ok(())
     }
 }
