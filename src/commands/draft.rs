@@ -1,14 +1,14 @@
 use crate::database::SourceType;
 use crate::utils::get_git_activity;
 use log::debug;
-use crate::Context;
+use crate::AppContext;
 
 pub struct DraftCommand {
     pub date: Option<String>,
 }
 
 impl DraftCommand {
-    pub fn execute(&self, ctx: &Context) -> anyhow::Result<()> {
+    pub fn execute(&self, ctx: &AppContext) -> anyhow::Result<()> {
         debug!("Executing gj draft");
 
         let draft_from_git = ctx.config.options.draft_from_git.unwrap_or(false);

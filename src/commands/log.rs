@@ -1,7 +1,7 @@
 use crate::database::SourceType;
 use clap::Args;
 use log::debug;
-use crate::Context;
+use crate::AppContext;
 
 #[derive(Args, Debug)]
 pub struct LogCommand {
@@ -11,7 +11,7 @@ pub struct LogCommand {
 }
 
 impl LogCommand {
-    pub fn execute(&self, ctx: &Context) -> anyhow::Result<()> {
+    pub fn execute(&self, ctx: &AppContext) -> anyhow::Result<()> {
         debug!("Executing gj log");
 
         ctx.db

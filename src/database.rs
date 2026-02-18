@@ -1,5 +1,6 @@
 use crate::utils::{to_date_key, to_sqlite_timestamp};
 use anyhow::{Context, Result};
+use chrono::NaiveDate;
 use log::debug;
 use rusqlite::OptionalExtension;
 use rusqlite::types::Value;
@@ -76,7 +77,20 @@ const MIGRATIONS_SLICE: &[M<'_>] = &[
         r#"
     CREATE TABLE sync_state (
     adapter TEXT PRIMARY KEY,      -- 'notion'
-    last_synced_at DATETIME
+    last_synced_at DATETIME,
+    FOREIGN KEY(adapter) REFERENCES sync_adapters(adapter) ON DELETE CASCADE
+    );
+        "#,
+    ),
+    M::up(
+        r#"
+    CREATE TABLE sync_adapters (
+    adapter TEXT PRIMARY KEY,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    config_json TEXT NOT NULL,
+    config_version INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
         "#,
     ),
@@ -236,7 +250,6 @@ pub struct UpdateSyncUnit {
     pub last_error: Option<String>,
 }
 
-
 // Sync Push
 impl Database {
     // todo: from / to
@@ -281,10 +294,14 @@ impl Database {
     }
 
     fn fetch_changed_logs(&self, cursor: Option<&str>) -> Result<Vec<Log>> {
+        // todo: ideally we should get from/to and query with them instead. this is a hacky solution to update past logs
         let logs_query = r#"
             SELECT id, content, source_type, created_at, updated_at
             FROM logs
-            WHERE updated_at > COALESCE(?1, '0001-01-01')
+            WHERE updated_at > COALESCE(
+                datetime(?1, '-7 days'),
+                datetime('now', '-7 days')
+            )
             ORDER BY updated_at ASC;
         "#;
 
@@ -484,5 +501,21 @@ impl Database {
         self.connection.execute(query, params![adapter])?;
 
         Ok(())
+    }
+}
+
+impl Database {
+    pub fn get_raw_sync_adapter_config(&self, adapter_name: &str) -> Result<Option<String>> {
+        let query = "SELECT config_json FROM sync_adapters WHERE adapter = ?1";
+
+        debug!("Fetching raw sync adapter config {}", adapter_name);
+
+        let config: Option<String> = self
+            .connection
+            .query_row(query, params![adapter_name], |row| row.get(0))
+            .optional()
+            .context("Failed to fetch sync adapter config")?;
+
+        Ok(config)
     }
 }

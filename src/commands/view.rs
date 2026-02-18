@@ -1,4 +1,4 @@
-use crate::Context;
+use crate::AppContext;
 use crate::database::Log;
 use crate::utils::{logs_by_day_map, logs_to_list_items};
 use anyhow::Result;
@@ -18,7 +18,7 @@ use time::{Date, Duration, Month, OffsetDateTime};
 pub struct ViewCommand {}
 
 impl ViewCommand {
-    pub fn execute(&self, ctx: &Context) -> Result<()> {
+    pub fn execute(&self, ctx: &AppContext) -> Result<()> {
         let today = OffsetDateTime::now_local()
             .unwrap_or(OffsetDateTime::now_utc())
             .date();
@@ -234,7 +234,7 @@ fn resume_tui() -> Result<ratatui::DefaultTerminal> {
     Ok(terminal)
 }
 
-fn run_calendar(logs: Vec<Log>, today: Date, ctx: &Context) -> Result<()> {
+fn run_calendar(logs: Vec<Log>, today: Date, ctx: &AppContext) -> Result<()> {
     let mut terminal = ratatui::init();
     let mut state = CalendarState::new(logs, today);
 

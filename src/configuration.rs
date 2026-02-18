@@ -36,7 +36,7 @@ pub struct Options {
 #[derive(Deserialize, Serialize, Debug, Default)]
 pub struct NotionConfig {
     #[serde()]
-    api_key: String,
+    pub api_key: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Default)]
@@ -73,8 +73,12 @@ impl AppConfig {
 
         debug!("Loaded Config: {:?}", config_raw);
 
-        config_raw
+        let config = config_raw
             .try_deserialize()
-            .context("Failed to deserialize the config.")
+            .context("Failed to deserialize the config.");
+
+        debug!("Parsed Config: {:?}", config);
+
+        config
     }
 }

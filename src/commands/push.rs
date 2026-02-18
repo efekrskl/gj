@@ -1,8 +1,10 @@
-use crate::Context;
+use crate::AppContext;
 use crate::database::{CreateSyncUnit, UpdateSyncUnit};
 use crate::utils::{build_day_content_string, hash_content};
 use clap::{Args, ValueEnum};
 use log::debug;
+use crate::sync::notion::NotionClient;
+use anyhow::{Result};
 
 #[derive(Debug, Clone, ValueEnum)]
 pub enum PushTarget {
@@ -16,12 +18,14 @@ pub struct PushCommand {
 }
 
 impl PushCommand {
-    pub fn execute(&self, ctx: &Context) -> anyhow::Result<()> {
+    pub async fn execute(&self, ctx: &AppContext) -> Result<()> {
         debug!("Executing gj push");
 
         match self.target {
             PushTarget::Notion => {
-                // let notion_client = NotionClient::new();
+                println!("{:?}", ctx.config);
+                let notion_client = NotionClient::new(ctx.config.push.notion.api_key.clone())?;
+
                 let (groups, sync_unit_maps) = ctx
                     .db
                     .get_logs_to_push("notion".to_string(), "day".to_string())?;
@@ -58,18 +62,19 @@ impl PushCommand {
                             ctx.db.update_sync_unit(&update)?;
                         }
                     } else {
+                        debug!("[push] found no sync unit, creating {:?}", day_key);
+                        let result = notion_client.push(&ctx, &day_key, &content_string).await?;
+
                         // If there's no sync unit -> sync
                         let data = CreateSyncUnit {
                             adapter: "notion".to_string(),
                             unit_type: "day".to_string(),
-                            local_key: day_key,
+                            local_key: day_key.clone(),
                             remote_key: Some("temp_key".to_string()),
                             last_error: None,
                             content_hash,
                             status: "success".to_string(),
                         };
-
-                        // todo: notion call
 
                         ctx.db.create_sync_unit(&data)?;
                     }

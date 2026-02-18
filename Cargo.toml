@@ -19,5 +19,6 @@ tokio = { version = "1.49.0", features = ["full"] }
 ratatui = { version = "0.30.0", features = ["widget-calendar"] }
 time = { version = "0.3.46", features = ["parsing", "formatting", "macros"] }
 time-macros = { version = "0.2.0-alpha.1" }
-reqwest = "0.13.1"
+reqwest = { version = "0.13.1", features = ["json"] }
 blake3 = "1.8.3"
+serde_json = "1.0.149"

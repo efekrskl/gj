@@ -1,5 +1,5 @@
 use crate::ai::AiClient;
-use crate::commands::LogCommand;
+use crate::commands::log::LogCommand;
 use crate::commands::draft::DraftCommand;
 use crate::commands::push::{PushCommand, PushTarget};
 use crate::commands::view::ViewCommand;
@@ -13,6 +13,7 @@ mod commands;
 mod configuration;
 mod database;
 mod utils;
+mod sync;
 
 #[derive(Parser)]
 #[command(name = "gj", version, about = "gj \nTerminal-first journaling.")]
@@ -41,19 +42,20 @@ enum Command {
     },
 }
 
-pub struct Context {
+pub struct AppContext {
     pub db: Database,
     pub config: AppConfig,
     pub ai_client: AiClient,
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     env_logger::init();
     let config = AppConfig::load()?;
     let db = Database::open(&config.database.filename)?;
     let ai_client = AiClient::new(config.options.ollama_model.clone());
 
-    let ctx = Context {
+    let ctx = AppContext {
         db,
         config,
         ai_client,
@@ -75,7 +77,7 @@ fn main() -> Result<()> {
             ViewCommand {}.execute(&ctx)?;
         }
         Command::Push { target } => {
-            PushCommand { target }.execute(&ctx)?;
+            PushCommand { target }.execute(&ctx).await?;
         }
     }
 
