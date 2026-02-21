@@ -1,10 +1,10 @@
 use crate::AppContext;
 use crate::database::{CreateSyncUnit, UpdateSyncUnit};
+use crate::sync::notion::NotionClient;
 use crate::utils::{build_day_content_string, hash_content};
+use anyhow::Result;
 use clap::{Args, ValueEnum};
 use log::debug;
-use crate::sync::notion::NotionClient;
-use anyhow::{Result};
 
 #[derive(Debug, Clone, ValueEnum)]
 pub enum PushTarget {
@@ -42,38 +42,75 @@ impl PushCommand {
                         );
                         // If there's a sync unit, but the status is failed -> sync
                         // If the hash doesn't match with the sync unit -> sync
-                        if sync_unit.status == "fail" || sync_unit.content_hash != content_hash {
+                        if sync_unit.status == "fail"
+                            || sync_unit.remote_key.is_none()
+                            || sync_unit.content_hash != content_hash
+                        {
                             debug!(
                                 "[push] sync_unit with local_key {} and status {} needs repush",
                                 sync_unit.local_key, sync_unit.status
                             );
 
-                            // todo: notion call
-
-                            let update = UpdateSyncUnit {
-                                content_hash,
-                                status: "success".to_string(),
-                                last_error: None,
-                                remote_key: Some("temp_id".to_string()),
-                                local_key: sync_unit.local_key.to_owned(),
-                                adapter: "notion".to_string(),
-                                unit_type: "day".to_string(),
+                            let res = match &sync_unit.remote_key {
+                                // Has an existing page, update content (more like erase + append)
+                                Some(remote_key) => {
+                                    notion_client
+                                        .update(&ctx, remote_key, &content_string)
+                                        .await
+                                }
+                                None => {
+                                    // todo: Can this ever happen? ("success" state without a remote_key)
+                                    continue;
+                                }
                             };
+
+                            let update = match res {
+                                // Well it's probably not a new key, but still
+                                Ok(new_remote_key) => UpdateSyncUnit {
+                                    content_hash,
+                                    status: "success".to_string(),
+                                    last_error: None,
+                                    remote_key: Some(new_remote_key),
+                                    local_key: sync_unit.local_key.clone(),
+                                    adapter: "notion".to_string(),
+                                    unit_type: "day".to_string(),
+                                },
+                                Err(err) => UpdateSyncUnit {
+                                    content_hash,
+                                    status: "fail".to_string(),
+                                    last_error: Some(err.to_string()),
+                                    remote_key: sync_unit.remote_key.clone(),
+                                    local_key: sync_unit.local_key.clone(),
+                                    adapter: "notion".to_string(),
+                                    unit_type: "day".to_string(),
+                                },
+                            };
+
                             ctx.db.update_sync_unit(&update)?;
                         }
                     } else {
                         debug!("[push] found no sync unit, creating {:?}", day_key);
-                        let result = notion_client.push(&ctx, &day_key, &content_string).await?;
+                        let res = notion_client.create(&ctx, &day_key, &content_string).await;
 
-                        // If there's no sync unit -> sync
-                        let data = CreateSyncUnit {
-                            adapter: "notion".to_string(),
-                            unit_type: "day".to_string(),
-                            local_key: day_key.clone(),
-                            remote_key: Some("temp_key".to_string()),
-                            last_error: None,
-                            content_hash,
-                            status: "success".to_string(),
+                        let data = match res {
+                            Ok(remote_key) => CreateSyncUnit {
+                                adapter: "notion".to_string(),
+                                unit_type: "day".to_string(),
+                                local_key: day_key.clone(),
+                                remote_key: Some(remote_key),
+                                last_error: None,
+                                content_hash,
+                                status: "success".to_string(),
+                            },
+                            Err(err) => CreateSyncUnit {
+                                adapter: "notion".to_string(),
+                                unit_type: "day".to_string(),
+                                local_key: day_key.clone(),
+                                remote_key: None,
+                                last_error: Some(err.to_string()),
+                                content_hash,
+                                status: "fail".to_string(),
+                            },
                         };
 
                         ctx.db.create_sync_unit(&data)?;
@@ -85,7 +122,7 @@ impl PushCommand {
         }
 
         ctx.db.upsert_sync_state("notion")?;
-        
+
         Ok(())
     }
 }

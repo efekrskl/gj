@@ -37,6 +37,7 @@ pub struct TextContent<'a> {
 pub struct CreatePageRequest<'a> {
     pub parent: CreatePageParent<'a>,
     pub properties: CreatePageProperties<'a>,
+    pub children: Vec<Block<'a>>,
 }
 
 #[derive(Debug, Serialize)]
