@@ -12,10 +12,15 @@ pub struct LogCommand {
 
 impl LogCommand {
     pub fn execute(&self, ctx: &AppContext) -> anyhow::Result<()> {
-        debug!("Executing gj log");
+        debug!(
+            "[log] command start has_custom_date={} message_len={}",
+            self.date.is_some(),
+            self.message.len()
+        );
 
         ctx.db
             .add_log(&self.message, self.date.clone(), SourceType::Log)?;
+        debug!("[log] command success");
         
         println!("good job, done.");
 

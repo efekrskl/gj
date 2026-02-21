@@ -56,6 +56,7 @@ pub struct AppConfig {
 
 impl AppConfig {
     pub fn load() -> Result<Self> {
+        debug!("[config] loading config from .gj.toml");
         let config_raw = ConfigBuilder::<DefaultState>::default()
             .add_source(
                 File::with_name(".gj.toml")
@@ -65,13 +66,17 @@ impl AppConfig {
             .build()
             .context("Failed to build the config hierarchy.")?;
 
-        debug!("Loaded Config: {:?}", config_raw);
-
-        let config = config_raw
+        let config: Result<Self> = config_raw
             .try_deserialize()
             .context("Failed to deserialize the config.");
-
-        debug!("Parsed Config: {:?}", config);
+        if let Ok(cfg) = &config {
+            debug!(
+                "[config] loaded draft.from_git={} draft.refine_with_ollama={} notion_api_key_present={}",
+                cfg.draft.from_git.unwrap_or(false),
+                cfg.draft.refine_with_ollama.unwrap_or(false),
+                cfg.push.notion.api_key.as_ref().map(|k| !k.is_empty()).unwrap_or(false)
+            );
+        }
 
         config
     }

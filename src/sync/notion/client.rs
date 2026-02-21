@@ -5,7 +5,6 @@ use crate::sync::notion::types::{
     DateProperty, DateValue, IdResponse, RichText, RichTextType, TextContent, TitleProperty,
 };
 use anyhow::{Context, Result, bail};
-use chrono::Utc;
 use log::debug;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderValue};
 
@@ -50,6 +49,12 @@ impl NotionClient {
         content: &str,
         database_id: &str,
     ) -> Result<String> {
+        debug!(
+            "[notion] create_page start title={} date={} content_len={}",
+            page_title,
+            date,
+            content.len()
+        );
         let request = CreatePageRequest {
             parent: CreatePageParent { database_id },
             properties: CreatePageProperties {
@@ -98,6 +103,7 @@ impl NotionClient {
             .json()
             .await
             .context("Failed to parse create page response JSON")?;
+        debug!("[notion] create_page success page_id={}", created.id);
 
         Ok(created.id)
     }
@@ -105,10 +111,11 @@ impl NotionClient {
     fn get_adapter_config(&self, ctx: &AppContext) -> Result<NotionAdapterConfig> {
         let raw_notion_adapter_config = ctx.db.get_raw_sync_adapter_config("notion")?;
 
-        debug!("raw_notion_adapter_config {:?}", raw_notion_adapter_config);
-
         match raw_notion_adapter_config {
-            Some(config_json_str) => NotionAdapterConfigRaw::from_json(&config_json_str),
+            Some(config_json_str) => {
+                debug!("[notion] adapter config found");
+                NotionAdapterConfigRaw::from_json(&config_json_str)
+            }
             None => bail!("Notion adapter config was not found."),
         }
     }
@@ -116,9 +123,8 @@ impl NotionClient {
     pub async fn create(&self, ctx: &AppContext, date: &str, content: &str) -> Result<String> {
         let notion_adapter_config = self.get_adapter_config(&ctx)?;
 
-        // todo: check if the page exists first
         debug!(
-            "[push] pushing to notion key: {}, content length: {}",
+            "[notion] create start day_key={} content_len={}",
             date,
             content.len()
         );
@@ -133,6 +139,11 @@ impl NotionClient {
         remote_key: &str,
         content: &str,
     ) -> Result<String> {
+        debug!(
+            "[notion] update start remote_key={} content_len={}",
+            remote_key,
+            content.len()
+        );
         // Erase existing content, properties etc. will be preserved so the user can keep some metadata safely
         let erase_response = self
             .client
@@ -151,6 +162,7 @@ impl NotionClient {
 
             bail!("Notion erase_content failed ({}): {}", status, body);
         }
+        debug!("[notion] update erase_content success remote_key={}", remote_key);
 
         // Append the new content
         let append_response = self
@@ -188,6 +200,7 @@ impl NotionClient {
 
             bail!("Notion append children failed ({}): {}", status, body);
         }
+        debug!("[notion] update append success remote_key={}", remote_key);
 
         Ok(remote_key.to_string())
     }

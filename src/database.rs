@@ -1,6 +1,5 @@
 use crate::utils::{to_date_key, to_sqlite_timestamp};
 use anyhow::{Context, Result};
-use chrono::NaiveDate;
 use log::debug;
 use rusqlite::OptionalExtension;
 use rusqlite::types::Value;
@@ -100,22 +99,21 @@ const MIGRATIONS: Migrations<'_> = Migrations::from_slice(MIGRATIONS_SLICE);
 
 impl Database {
     pub fn open(sqlite_filename: &String) -> Result<Database> {
+        debug!("[db] opening sqlite connection file={}", sqlite_filename);
         let mut connection =
             Connection::open(sqlite_filename).context("Couldn't open the sqlite file.")?;
-
-        debug!("SQLite connection is open.");
 
         connection.pragma_update(None, "journal_mode", "WAL")?;
         connection.pragma_update(None, "synchronous", "NORMAL")?;
         connection.pragma_update(None, "foreign_keys", "ON")?;
 
-        debug!("Applied PRAGMAs.");
+        debug!("[db] sqlite pragmas applied");
 
         MIGRATIONS
             .to_latest(&mut connection)
             .context("Couldn't apply the database migrations.")?;
 
-        debug!("Migrations are complete.");
+        debug!("[db] migrations complete");
 
         Ok(Self { connection })
     }
@@ -126,11 +124,11 @@ impl Database {
         SET content = ?1, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?2"#;
 
-        debug!("Executing {query} with args {:?}", (id, content));
+        debug!("[db] updating log id={} content_len={}", id, content.len());
 
         self.connection.execute(query, (content, id))?;
 
-        debug!("Query complete.");
+        debug!("[db] updated log id={}", id);
 
         Ok(())
     }
@@ -151,14 +149,16 @@ impl Database {
         };
 
         debug!(
-            "Executing {query} with args {:?}",
-            (content, source_type.as_str(), &date)
+            "[db] adding log source_type={} has_custom_date={} content_len={}",
+            source_type.as_str(),
+            date.is_some(),
+            content.len()
         );
 
         self.connection
             .execute(query, (content, source_type.as_str(), date))?;
 
-        debug!("Query complete.");
+        debug!("[db] log inserted");
 
         Ok(())
     }
@@ -180,8 +180,7 @@ impl Database {
 
     pub fn get_logs_by_year(&self, year: i32) -> Result<Vec<Log>> {
         let query = "SELECT id, content, source_type, created_at, updated_at FROM logs WHERE strftime('%Y', created_at) = ?1";
-
-        debug!("Preparing {query}");
+        debug!("[db] loading logs for year={}", year);
 
         let mut statement = self.connection.prepare(query)?;
         let rows = statement
@@ -197,7 +196,7 @@ impl Database {
             .collect::<Result<Vec<_>, _>>()
             .context("Failed to fetch logs.")?;
 
-        debug!("Query complete.");
+        debug!("[db] loaded logs count={} year={}", rows.len(), year);
 
         Ok(rows)
     }
@@ -281,7 +280,6 @@ impl Database {
 
     fn get_sync_cursor(&self, adapter: &str) -> Result<Option<String>> {
         let query = "SELECT last_synced_at FROM sync_state WHERE adapter = ?1;";
-        debug!("[push] cursor_query={}", query);
 
         let cursor: Option<String> = self
             .connection
@@ -305,8 +303,10 @@ impl Database {
             ORDER BY updated_at ASC;
         "#;
 
-        debug!("[push] logs_query={}", logs_query.trim());
-        debug!("[push] logs_query cursor={:?}", cursor);
+        debug!(
+            "[push] loading changed logs cursor_present={}",
+            cursor.is_some()
+        );
 
         let mut statement = self.connection.prepare(logs_query)?;
         let logs = statement
@@ -330,8 +330,6 @@ impl Database {
         &self,
         logs: Vec<Log>,
     ) -> Result<(HashMap<String, Vec<Log>>, Vec<String>)> {
-        debug!("[push] grouping by day");
-
         let mut groups: HashMap<String, Vec<Log>> = HashMap::new();
         let mut keys: HashSet<String> = HashSet::new();
         let mut skipped: usize = 0;
@@ -393,8 +391,7 @@ impl Database {
             in_filter
         );
 
-        debug!("[push] sync_units_query={}", query.trim());
-        debug!("[push] sync_units_query keys_count={}", local_keys.len());
+        debug!("[push] loading existing sync units keys_count={}", local_keys.len());
 
         let mut params_vec: Vec<Value> = Vec::with_capacity(2 + local_keys.len());
         params_vec.push(adapter.into());
@@ -439,8 +436,6 @@ impl Database {
             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
         "#;
 
-        debug!("[push] create_sync_unit={}", query.trim());
-
         self.connection.execute(
             query,
             params![
@@ -454,7 +449,12 @@ impl Database {
             ],
         )?;
 
-        debug!("[push] created sync unit with local_key {}", unit.local_key);
+        debug!(
+            "[push] created sync unit local_key={} status={} remote_key_present={}",
+            unit.local_key,
+            unit.status,
+            unit.remote_key.is_some()
+        );
 
         Ok(())
     }
@@ -470,7 +470,12 @@ impl Database {
             WHERE adapter = ?5 AND unit_type = ?6 AND local_key = ?7
         "#;
 
-        debug!("[push] update_sync_unit local_key={}", unit.local_key);
+        debug!(
+            "[push] updating sync unit local_key={} status={} remote_key_present={}",
+            unit.local_key,
+            unit.status,
+            unit.remote_key.is_some()
+        );
 
         self.connection.execute(
             query,
@@ -507,8 +512,7 @@ impl Database {
 impl Database {
     pub fn get_raw_sync_adapter_config(&self, adapter_name: &str) -> Result<Option<String>> {
         let query = "SELECT config_json FROM sync_adapters WHERE adapter = ?1";
-
-        debug!("Fetching raw sync adapter config {}", adapter_name);
+        debug!("[db] loading adapter config adapter={}", adapter_name);
 
         let config: Option<String> = self
             .connection

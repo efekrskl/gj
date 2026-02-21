@@ -30,7 +30,7 @@ pub fn get_git_activity(email: &str, since: Option<String>) -> Result<String> {
     }
     let since = since.unwrap_or("midnight".to_string());
 
-    debug!("Running git log since: {since} email: {email}");
+    debug!("[draft] collecting git activity since={} author={}", since, email);
 
     let log_output = Command::new("git")
         .args([
@@ -44,9 +44,8 @@ pub fn get_git_activity(email: &str, since: Option<String>) -> Result<String> {
         .output()
         .context("Failed to run git log")?;
 
-    debug!("Git log output: {:?}", log_output);
-
     let logs = String::from_utf8_lossy(&log_output.stdout).to_string();
+    debug!("[draft] git commits collected count={}", logs.lines().count());
 
     if logs.is_empty() {
         Ok("No git activity found today.".to_string())
