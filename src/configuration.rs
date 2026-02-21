@@ -5,12 +5,6 @@ use log::debug;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, Default)]
-pub struct User {
-    #[serde(default)]
-    pub email: String,
-}
-
-#[derive(Deserialize, Serialize, Debug, Default)]
 pub struct Database {
     #[serde(default = "database_filename")]
     pub filename: String,
@@ -19,15 +13,18 @@ pub struct Database {
 fn database_filename() -> String { String::from("gj.sqlite3") }
 
 #[derive(Deserialize, Serialize, Debug, Default)]
-pub struct Options {
-    #[serde()]
-    pub draft_from_git: Option<bool>,
+pub struct Draft {
+    #[serde(default)]
+    pub git_email: String,
 
     #[serde()]
-    pub draft_with_ollama: Option<bool>,
+    pub from_git: Option<bool>,
 
     #[serde()]
-    pub redact_sensitive_info_ollama: Option<bool>,
+    pub refine_with_ollama: Option<bool>,
+
+    #[serde()]
+    pub redact_sensitive_with_ollama: Option<bool>,
 
     #[serde()]
     pub ollama_model: Option<String>,
@@ -48,13 +45,10 @@ pub struct Push {
 #[derive(Deserialize, Serialize, Debug, Default)]
 pub struct AppConfig {
     #[serde(default)]
-    pub user: User,
-
-    #[serde(default)]
     pub database: Database,
 
     #[serde(default)]
-    pub options: Options,
+    pub draft: Draft,
 
     #[serde(default)]
     pub push: Push,

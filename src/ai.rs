@@ -15,24 +15,41 @@ impl AiClient {
         }
     }
 
-    pub fn summarize(&self, text: &str) -> Result<String> {
+    pub fn summarize(&self, text: &str, redact_sensitive: Option<bool>) -> Result<String> {
+        let redact = redact_sensitive.unwrap_or(false);
+        let redact_rule = if redact {
+            "Redact or generalize any company-sensitive details (customer names, internal URLs, credentials, proprietary architecture, unreleased features, incident specifics, and exact revenue/security metrics) while preserving the business impact and contribution narrative."
+        } else {
+            ""
+        };
+
         let prompt = format!(
-            "You are a senior software engineer writing a daily work log.
+            "You are a senior software engineer writing a professional daily work journal from git commits.
 
-            Rewrite the following git commits into impact-focused work log entries.
+            Task:
+            Turn the commit list into a clear, supervisor-friendly daily summary of contributions.
 
-            STRICT RULES:
-            - Output ONLY the bullet list. No introductions, explanations, examples, or conclusions.
-            - Group related commits into single work items.
-            - Focus on problem solved, responsibility taken, and outcome.
-            - Remove low-level implementation and git details.
-            - Use first person, active voice.
-            - Be concise and professional. Do not exaggerate.
+            Goal:
+            Explain what I accomplished today, why it mattered, and what outcomes were delivered.
 
-            FORMAT:
-            - Bullet list
-            - 1–2 sentences per bullet
-            - Each bullet = one meaningful contribution
+            STYLE RULES:
+            - Write in first person, active voice.
+            - Use plain, professional language.
+            - Focus on impact, ownership, and outcomes.
+            - Group related commits into coherent work themes.
+            - Do not copy commit messages verbatim.
+            - Avoid low-level implementation details unless they are necessary for understanding impact.
+            - Avoid hype and vague claims.
+
+            OUTPUT RULES:
+            - Output in Markdown.
+            - Do NOT output a raw bullet list of commits.
+            - Start with a short \"Daily Summary\" paragraph (3-5 sentences).
+            - Then add 2-4 short sections with headings (e.g., \"Product/Feature Work\", \"Reliability & Fixes\", \"Documentation\").
+            - Under each section, write concise prose describing completed work and results.
+            - If commit context is ambiguous, make a conservative, clearly stated inference.
+            - Do not include introductions, meta commentary, or conclusions outside the requested format.
+             {redact_rule}
 
             COMMITS:
             {text}",

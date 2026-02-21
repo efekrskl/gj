@@ -53,7 +53,7 @@ async fn main() -> Result<()> {
     env_logger::init();
     let config = AppConfig::load()?;
     let db = Database::open(&config.database.filename)?;
-    let ai_client = AiClient::new(config.options.ollama_model.clone());
+    let ai_client = AiClient::new(config.draft.ollama_model.clone());
 
     let ctx = AppContext {
         db,
