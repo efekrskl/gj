@@ -71,7 +71,7 @@ async fn main() -> Result<()> {
             LogCommand { message, date }.execute(&ctx)?;
         }
         Command::Draft { date } => {
-            DraftCommand { date }.execute(&ctx)?;
+            DraftCommand { date }.execute(&ctx).await?;
         }
         Command::View => {
             ViewCommand {}.execute(&ctx)?;

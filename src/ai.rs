@@ -15,7 +15,7 @@ impl AiClient {
         }
     }
 
-    pub fn summarize(&self, text: &str, redact_sensitive: Option<bool>) -> Result<String> {
+    pub async fn summarize(&self, text: &str, redact_sensitive: Option<bool>) -> Result<String> {
         let redact = redact_sensitive.unwrap_or(false);
         let redact_rule = if redact {
             "Redact or generalize any company-sensitive details (customer names, internal URLs, credentials, proprietary architecture, unreleased features, incident specifics, and exact revenue/security metrics) while preserving the business impact and contribution narrative."
@@ -56,10 +56,11 @@ impl AiClient {
         );
 
         let request = GenerationRequest::new(self.model.clone(), prompt);
-        let rt = tokio::runtime::Runtime::new().context("Failed to create async runtime.")?;
 
-        let response = rt
-            .block_on(async { self.client.generate(request).await })
+        let response = self
+            .client
+            .generate(request)
+            .await
             .context("Ollama request failed. Is the server running?")?;
 
         Ok(response.response)

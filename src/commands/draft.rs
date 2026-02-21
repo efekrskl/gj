@@ -1,14 +1,14 @@
+use crate::AppContext;
 use crate::database::SourceType;
 use crate::utils::get_git_activity;
 use log::debug;
-use crate::AppContext;
 
 pub struct DraftCommand {
     pub date: Option<String>,
 }
 
 impl DraftCommand {
-    pub fn execute(&self, ctx: &AppContext) -> anyhow::Result<()> {
+    pub async fn execute(&self, ctx: &AppContext) -> anyhow::Result<()> {
         debug!(
             "[draft] command start has_custom_date={} from_git={} refine_with_ollama={}",
             self.date.is_some(),
@@ -29,17 +29,13 @@ impl DraftCommand {
         }?;
         let draft_with_ollama = ctx.config.draft.refine_with_ollama.unwrap_or(false);
         if draft_with_ollama {
-            if let Ok(response) =
-                ctx.ai_client
-                    .summarize(&template, ctx.config.draft.redact_sensitive_with_ollama)
+            if let Ok(response) = ctx
+                .ai_client
+                .summarize(&template, ctx.config.draft.redact_sensitive_with_ollama)
+                .await
             {
-                debug!(
-                    "[draft] ollama refinement applied input_len={} output_len={}",
-                    template.len(),
-                    response.len()
-                );
-                template = response
-            };
+                template = response;
+            }
         }
         let edited = edit::edit(template)?;
         debug!("[draft] editor completed edited_len={}", edited.len());
