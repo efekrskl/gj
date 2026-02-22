@@ -76,20 +76,7 @@ const MIGRATIONS_SLICE: &[M<'_>] = &[
         r#"
     CREATE TABLE sync_state (
     adapter TEXT PRIMARY KEY,      -- 'notion'
-    last_synced_at DATETIME,
-    FOREIGN KEY(adapter) REFERENCES sync_adapters(adapter) ON DELETE CASCADE
-    );
-        "#,
-    ),
-    M::up(
-        r#"
-    CREATE TABLE sync_adapters (
-    adapter TEXT PRIMARY KEY,
-    enabled INTEGER NOT NULL DEFAULT 1,
-    config_json TEXT NOT NULL,
-    config_version INTEGER NOT NULL DEFAULT 1,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    last_synced_at DATETIME
     );
         "#,
     ),
@@ -391,7 +378,10 @@ impl Database {
             in_filter
         );
 
-        debug!("[push] loading existing sync units keys_count={}", local_keys.len());
+        debug!(
+            "[push] loading existing sync units keys_count={}",
+            local_keys.len()
+        );
 
         let mut params_vec: Vec<Value> = Vec::with_capacity(2 + local_keys.len());
         params_vec.push(adapter.into());
@@ -506,20 +496,5 @@ impl Database {
         self.connection.execute(query, params![adapter])?;
 
         Ok(())
-    }
-}
-
-impl Database {
-    pub fn get_raw_sync_adapter_config(&self, adapter_name: &str) -> Result<Option<String>> {
-        let query = "SELECT config_json FROM sync_adapters WHERE adapter = ?1";
-        debug!("[db] loading adapter config adapter={}", adapter_name);
-
-        let config: Option<String> = self
-            .connection
-            .query_row(query, params![adapter_name], |row| row.get(0))
-            .optional()
-            .context("Failed to fetch sync adapter config")?;
-
-        Ok(config)
     }
 }

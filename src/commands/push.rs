@@ -2,7 +2,7 @@ use crate::AppContext;
 use crate::database::{CreateSyncUnit, UpdateSyncUnit};
 use crate::sync::notion::NotionClient;
 use crate::utils::{build_day_content_string, hash_content};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Args, ValueEnum};
 use log::debug;
 
@@ -23,7 +23,23 @@ impl PushCommand {
 
         match self.target {
             PushTarget::Notion => {
-                let notion_client = NotionClient::new(ctx.config.push.notion.api_key.clone())?;
+                let api_key = ctx
+                    .config
+                    .push
+                    .notion
+                    .api_key
+                    .clone()
+                    .context("Notion API key missing")?;
+
+                let database_id = ctx
+                    .config
+                    .push
+                    .notion
+                    .database_id
+                    .clone()
+                    .context("Notion database_id missing")?;
+
+                let notion_client = NotionClient::new(api_key, database_id)?;
 
                 let (groups, sync_unit_maps) = ctx
                     .db

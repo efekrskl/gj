@@ -1,5 +1,4 @@
 use crate::AppContext;
-use crate::sync::notion::adapter_config::{NotionAdapterConfig, NotionAdapterConfigRaw};
 use crate::sync::notion::types::{
     Block, BlockType, BulletedListItem, CreatePageParent, CreatePageProperties, CreatePageRequest,
     DateProperty, DateValue, IdResponse, RichText, RichTextType, TextContent, TitleProperty,
@@ -11,13 +10,11 @@ use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderValue};
 pub struct NotionClient {
     client: reqwest::Client,
     base_url: String,
+    database_id: String,
 }
 
 impl NotionClient {
-    pub fn new(api_key: Option<String>) -> Result<Self> {
-        // todo: improve the message and call for action
-        let api_key = api_key.context("Notion API key is missing.")?;
-
+    pub fn new(api_key: String, database_id: String) -> Result<Self> {
         let mut headers = reqwest::header::HeaderMap::with_capacity(3);
         headers.insert(
             AUTHORIZATION,
@@ -33,8 +30,9 @@ impl NotionClient {
             .context("Failed to build reqwest client.")?;
 
         Ok(NotionClient {
-            client,
             base_url: "https://api.notion.com".to_string(),
+            client,
+            database_id
         })
     }
 
@@ -108,28 +106,14 @@ impl NotionClient {
         Ok(created.id)
     }
 
-    fn get_adapter_config(&self, ctx: &AppContext) -> Result<NotionAdapterConfig> {
-        let raw_notion_adapter_config = ctx.db.get_raw_sync_adapter_config("notion")?;
-
-        match raw_notion_adapter_config {
-            Some(config_json_str) => {
-                debug!("[notion] adapter config found");
-                NotionAdapterConfigRaw::from_json(&config_json_str)
-            }
-            None => bail!("Notion adapter config was not found."),
-        }
-    }
-
     pub async fn create(&self, ctx: &AppContext, date: &str, content: &str) -> Result<String> {
-        let notion_adapter_config = self.get_adapter_config(&ctx)?;
-
         debug!(
             "[notion] create start day_key={} content_len={}",
             date,
             content.len()
         );
 
-        self.create_page(date, date, content, &notion_adapter_config.database_id)
+        self.create_page(date, date, content, &self.database_id)
             .await
     }
 

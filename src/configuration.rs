@@ -34,6 +34,9 @@ pub struct Draft {
 pub struct NotionConfig {
     #[serde()]
     pub api_key: Option<String>,
+
+    #[serde()]
+    pub database_id: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Debug, Default)]
