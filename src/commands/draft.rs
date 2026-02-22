@@ -41,7 +41,7 @@ impl DraftCommand {
         debug!("[draft] editor completed edited_len={}", edited.len());
 
         ctx.db
-            .add_log(&edited, self.date.clone(), SourceType::Draft)?;
+            .add_log(&edited, self.date.as_deref(), SourceType::Draft)?;
         debug!("[draft] command success");
 
         Ok(())

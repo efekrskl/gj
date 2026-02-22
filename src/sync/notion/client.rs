@@ -106,7 +106,7 @@ impl NotionClient {
         Ok(created.id)
     }
 
-    pub async fn create(&self, ctx: &AppContext, date: &str, content: &str) -> Result<String> {
+    pub async fn create(&self, date: &str, content: &str) -> Result<String> {
         debug!(
             "[notion] create start day_key={} content_len={}",
             date,

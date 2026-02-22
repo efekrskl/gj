@@ -29,15 +29,7 @@ impl SourceType {
 pub struct Log {
     pub id: i64,
     pub content: String,
-    source_type: String,
     pub created_at: String,
-    updated_at: String,
-}
-
-#[derive(Debug)]
-pub struct LogPreview {
-    pub id: i64,
-    created_at: String,
 }
 
 // todo: improve the dtos
@@ -123,7 +115,7 @@ impl Database {
     pub fn add_log(
         &self,
         content: &str,
-        date: Option<String>,
+        date: Option<&str>,
         source_type: SourceType,
     ) -> Result<()> {
         let query = r#"
@@ -175,9 +167,7 @@ impl Database {
                 Ok(Log {
                     id: row.get(0)?,
                     content: row.get(1)?,
-                    source_type: row.get(2)?,
                     created_at: row.get(3)?,
-                    updated_at: row.get(4)?,
                 })
             })?
             .collect::<Result<Vec<_>, _>>()
@@ -188,25 +178,6 @@ impl Database {
         Ok(rows)
     }
 }
-#[derive(Debug)]
-pub struct SyncState {
-    adapter: String,
-    last_synced_at: Option<String>,
-}
-#[derive(Debug)]
-pub struct SyncUnit {
-    pub id: i64,
-    pub adapter: String,
-    pub unit_type: String,
-    pub local_key: String,
-    pub remote_key: Option<String>,
-    pub content_hash: String,
-    pub status: String,
-    pub last_error: Option<String>,
-    pub created_at: String,
-    pub last_synced_at: Option<String>,
-}
-
 #[derive(Debug)]
 pub struct SyncUnitPreview {
     pub local_key: String,
@@ -301,9 +272,7 @@ impl Database {
                 Ok(Log {
                     id: row.get(0)?,
                     content: row.get(1)?,
-                    source_type: row.get(2)?,
                     created_at: row.get(3)?,
-                    updated_at: row.get(4)?,
                 })
             })?
             .collect::<std::result::Result<Vec<_>, _>>()

@@ -1,7 +1,7 @@
+use crate::AppContext;
 use crate::database::SourceType;
 use clap::Args;
 use log::debug;
-use crate::AppContext;
 
 #[derive(Args, Debug)]
 pub struct LogCommand {
@@ -19,9 +19,9 @@ impl LogCommand {
         );
 
         ctx.db
-            .add_log(&self.message, self.date.clone(), SourceType::Log)?;
+            .add_log(&self.message, self.date.as_deref(), SourceType::Log)?;
         debug!("[log] command success");
-        
+
         println!("good job, done.");
 
         Ok(())

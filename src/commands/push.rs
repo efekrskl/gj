@@ -137,7 +137,7 @@ impl PushCommand {
                         }
                     } else {
                         debug!("[push] creating remote page day={}", day_key);
-                        let res = notion_client.create(&ctx, &day_key, &content_string).await;
+                        let res = notion_client.create(&day_key, &content_string).await;
 
                         let data = match res {
                             Ok(remote_key) => {

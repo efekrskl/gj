@@ -24,7 +24,7 @@ impl ViewCommand {
             .date();
         let logs = ctx.db.get_logs_by_year(today.year())?;
 
-        let result = run_calendar(logs, today, ctx);
+        run_calendar(logs, today, ctx)?;
 
         Ok(())
     }

@@ -54,7 +54,7 @@ pub fn get_git_activity(email: &str, since: Option<String>) -> Result<String> {
     }
 }
 
-pub fn logs_to_list_items(logs: &[Log]) -> Vec<ListItem> {
+pub fn logs_to_list_items(logs: &[Log]) -> Vec<ListItem<'_>> {
     let fmt = format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]").unwrap();
 
     let logs = logs
